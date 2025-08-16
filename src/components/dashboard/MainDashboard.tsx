@@ -173,34 +173,34 @@ export const MainDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <MetricCard
                 title="Total Contas"
-                value={metrics.totalAccounts?.toString() || '150'}
-                change={metrics.accountsChange || '+20.1% em relação ao mês anterior'}
+                value={metrics.totalContas?.toString() || '150'}
+                change="+20.1% em relação ao mês anterior"
                 icon={Search}
                 variant="positive"
               />
               
               <MetricCard
                 title="Consultas Hoje"
-                value={metrics.queriesToday?.toString() || '24'}
-                change={metrics.queriesChange || '+12 consultas realizadas'}
+                value={metrics.consultasHoje?.toString() || '24'}
+                change="+12 consultas realizadas"
                 icon={Activity}
                 variant="positive"
               />
               
               <MetricCard
-                title="Taxa de Sucesso"
-                value={metrics.successRate || '98.5%'}
-                change={metrics.successRateChange || '+2.3% em relação ao mês anterior'}
+                title="Importações Pendentes"
+                value={metrics.importacoesPendentes?.toString() || '3'}
+                change="2 em processamento"
                 icon={TrendingUp}
-                variant="positive"
+                variant="warning"
               />
               
               <MetricCard
-                title="Alertas Ativos"
-                value={metrics.activeAlerts?.toString() || '3'}
-                change={metrics.alertsChange || '2 críticos, 1 atenção'}
+                title="Movimentações Hoje"
+                value={metrics.movimentacoesHoje?.toString() || '450'}
+                change="+15% vs ontem"
                 icon={AlertTriangle}
-                variant="negative"
+                variant="positive"
               />
             </div>
           )}
@@ -210,7 +210,7 @@ export const MainDashboard: React.FC = () => {
             {charts && (
               <ChartWidget
                 title="Consultas por Período"
-                data={charts.queriesByPeriod}
+                data={charts.consultasPorPeriodo}
                 type="line"
               />
             )}
@@ -218,7 +218,7 @@ export const MainDashboard: React.FC = () => {
             {charts && (
               <ChartWidget
                 title="Distribuição de Importações"
-                data={charts.importsDistribution}
+                data={charts.importacoesPorStatus}
                 type="pie"
               />
             )}

@@ -1,4 +1,5 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
+import axios from 'axios'
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 
 /**
  * Configuração base da API para integração com backend
@@ -17,7 +18,7 @@ const API_CONFIG = {
     baseURL: import.meta.env.VITE_API_BASE_URL || 'https://api.coppetec.ufrj.br',
     timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '15000'),
     retryAttempts: parseInt(import.meta.env.VITE_API_RETRY_ATTEMPTS || '2'),
-    retryDelay: parseInt(import.meta.env.VITE_API_RETRY_DELAY || '2000')
+    retryDelay: parseInt(import.meta.env.VITE_API_RETRY_DELAY || '1000')
   }
 }
 

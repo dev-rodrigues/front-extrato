@@ -118,24 +118,28 @@ export const getDashboardCharts = async (): Promise<DashboardCharts> => {
         datasets: [{
           label: 'Importações',
           data: [3, 2, 45, 1],
-          backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444']
+          backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'],
+          borderColor: ['#d97706', '#1d4ed8', '#059669', '#dc2626'],
+          borderWidth: 2
         }]
       },
       movimentacoesPorTipo: {
-        labels: ['Créditos', 'Débitos'],
+        labels: ['Crédito', 'Débito', 'Transferência', 'Pagamento'],
         datasets: [{
           label: 'Movimentações',
-          data: [8500, 7100],
-          backgroundColor: ['#10b981', '#ef4444']
+          data: [12500, 9800, 3200, 4500],
+          backgroundColor: ['#10b981', '#ef4444', '#3b82f6', '#f59e0b'],
+          borderColor: ['#059669', '#dc2626', '#1d4ed8', '#d97706'],
+          borderWidth: 2
         }]
       },
       consultasPorDia: {
-        labels,
+        labels: labels,
         datasets: [{
           label: 'Consultas',
-          data: [45, 38, 42, 35, 48, 52, 45],
-          backgroundColor: '#3b82f6',
-          borderColor: '#1d4ed8',
+          data: [45, 38, 42, 35, 48, 52, 41],
+          backgroundColor: ['#3b82f6'],
+          borderColor: ['#1d4ed8'],
           borderWidth: 2
         }]
       }
@@ -144,7 +148,7 @@ export const getDashboardCharts = async (): Promise<DashboardCharts> => {
 }
 
 /**
- * Buscar alertas e notificações do dashboard
+ * Buscar alertas do dashboard
  */
 export const getDashboardAlerts = async (): Promise<DashboardAlert[]> => {
   try {
@@ -157,30 +161,28 @@ export const getDashboardAlerts = async (): Promise<DashboardAlert[]> => {
     return [
       {
         id: '1',
-        tipo: 'success',
-        titulo: 'Importação Concluída',
-        mensagem: 'Arquivo extrato_20240115.txt foi processado com sucesso',
+        tipo: 'info',
+        titulo: 'Sistema Atualizado',
+        mensagem: 'Nova versão do sistema foi implantada com sucesso',
         dataHora: new Date().toISOString(),
-        lido: false,
-        acao: 'Ver Detalhes',
-        link: '/importacoes/status'
+        lido: false
       },
       {
         id: '2',
-        tipo: 'info',
-        titulo: 'Nova Consulta Realizada',
-        mensagem: 'Consulta para Ag. 1234 / Conta 12.345-6 foi executada',
-        dataHora: new Date(Date.now() - 300000).toISOString(), // 5 min atrás
+        tipo: 'warning',
+        titulo: 'Importação Pendente',
+        mensagem: '5 arquivos aguardando processamento há mais de 1 hora',
+        dataHora: new Date(Date.now() - 3600000).toISOString(),
         lido: false,
-        acao: 'Ver Consulta',
-        link: '/consultas/historico'
+        acao: 'Verificar',
+        link: '/importacoes'
       },
       {
         id: '3',
-        tipo: 'warning',
-        titulo: 'Sistema de Backup',
-        mensagem: 'Backup automático será executado em 30 minutos',
-        dataHora: new Date(Date.now() - 600000).toISOString(), // 10 min atrás
+        tipo: 'success',
+        titulo: 'Backup Concluído',
+        mensagem: 'Backup automático do banco de dados foi concluído',
+        dataHora: new Date(Date.now() - 7200000).toISOString(),
         lido: true
       }
     ]
@@ -280,13 +282,4 @@ export const getSystemUsage = async (): Promise<{
       networkUsage: 23 // %
     }
   }
-}
-
-// Exportar tipos para uso em outros componentes
-export type {
-  DashboardMetrics,
-  ChartData,
-  DashboardCharts,
-  DashboardAlert,
-  SystemStatus
 }
