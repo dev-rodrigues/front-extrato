@@ -1,122 +1,80 @@
-import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronRight, Home } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
-/**
- * Componente de breadcrumb para navegação hierárquica
- * Mostra o caminho atual na aplicação
- */
-
-interface BreadcrumbItem {
-  label: string
-  href: string
-  icon?: React.ComponentType<{ className?: string }>
-}
-
-// Mapeamento de rotas para labels amigáveis
-const routeLabels: Record<string, string> = {
-  'consultas': 'Consultas',
-  'nova-consulta': 'Nova Consulta',
-  'historico': 'Histórico',
-  'favoritos': 'Favoritos',
-  'importacoes': 'Importações',
-  'status': 'Status',
-  'historico-arquivos': 'Histórico de Arquivos',
-  'configuracoes': 'Configurações',
-  'movimentacoes': 'Movimentações',
-  'extratos': 'Extratos',
-  'analise': 'Análise',
-  'relatorios': 'Relatórios',
-  'admin': 'Administração',
-  'usuarios': 'Usuários',
-  'logs': 'Logs',
-}
-
-// Mapeamento de rotas para ícones
-const routeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  'consultas': require('lucide-react').Search,
-  'importacoes': require('lucide-react').Download,
-  'movimentacoes': require('lucide-react').DollarSign,
-  'admin': require('lucide-react').Settings,
-}
-
-export const Breadcrumb: React.FC = () => {
+export const Breadcrumb = () => {
   const location = useLocation()
   
-  // Gerar breadcrumbs baseado na rota atual
-  const generateBreadcrumbs = (): BreadcrumbItem[] => {
-    const pathSegments = location.pathname.split('/').filter(Boolean)
-    const breadcrumbs: BreadcrumbItem[] = []
+  // Função para gerar breadcrumbs baseado na rota atual
+  const generateBreadcrumbs = () => {
+    const pathnames = location.pathname.split('/').filter(Boolean)
+    const breadcrumbs = [
+      { name: 'Dashboard', path: '/', icon: Home }
+    ]
     
-    // Sempre incluir o home
-    breadcrumbs.push({
-      label: 'Dashboard',
-      href: '/',
-      icon: Home
-    })
-    
-    // Construir breadcrumbs para cada segmento da rota
     let currentPath = ''
-    pathSegments.forEach((segment, index) => {
-      currentPath += `/${segment}`
+    pathnames.forEach((name, index) => {
+      currentPath += `/${name}`
       
-      const label = routeLabels[segment] || segment
-      const icon = routeIcons[segment]
+      // Mapear nomes amigáveis para as rotas
+      const friendlyName = getFriendlyName(name, index, pathnames)
       
       breadcrumbs.push({
-        label,
-        href: currentPath,
-        icon
+        name: friendlyName,
+        path: currentPath,
+        icon: null
       })
     })
     
     return breadcrumbs
   }
   
+  // Função para obter nomes amigáveis das rotas
+  const getFriendlyName = (name: string, index: number, pathnames: string[]) => {
+    const nameMap: Record<string, string> = {
+      'consulta': 'Consulta',
+      'logs': 'Logs',
+      'resultados': 'Resultados',
+      'importacoes': 'Importações',
+      'movimentacoes': 'Movimentações',
+      'relatorios': 'Relatórios',
+      'configuracoes': 'Configurações'
+    }
+    
+    return nameMap[name] || name.charAt(0).toUpperCase() + name.slice(1)
+  }
+  
   const breadcrumbs = generateBreadcrumbs()
   
-  // Não mostrar breadcrumb se estiver apenas no dashboard
   if (breadcrumbs.length <= 1) {
-    return null
+    return null // Não mostrar breadcrumb na página inicial
   }
   
   return (
-    <nav className="flex items-center space-x-1 text-sm text-muted-foreground" aria-label="Breadcrumb">
-      {breadcrumbs.map((item, index) => {
-        const isLast = index === breadcrumbs.length - 1
-        const isFirst = index === 0
-        
-        return (
-          <React.Fragment key={item.href}>
-            {index > 0 && (
-              <ChevronRight className="h-4 w-4 mx-1" />
-            )}
-            
-            {isLast ? (
-              // Último item (página atual) - não é link
-              <span className="flex items-center space-x-1 font-medium text-foreground">
-                {item.icon && <item.icon className="h-4 w-4" />}
-                <span>{item.label}</span>
-              </span>
-            ) : (
-              // Itens anteriores - são links
-              <Link
-                to={item.href}
-                className={cn(
-                  'flex items-center space-x-1 hover:text-foreground transition-colors',
-                  isFirst && 'text-foreground'
-                )}
-              >
-                {item.icon && <item.icon className="h-4 w-4" />}
-                <span>{item.label}</span>
-              </Link>
-            )}
-          </React.Fragment>
-        )
-      })}
+    <nav className="flex items-center space-x-1 text-sm text-muted-foreground mb-4">
+      {breadcrumbs.map((breadcrumb, index) => (
+        <div key={breadcrumb.path} className="flex items-center">
+          {index > 0 && (
+            <ChevronRight className="h-4 w-4 mx-2" />
+          )}
+          
+          {index === breadcrumbs.length - 1 ? (
+            // Último item (página atual)
+            <span className="font-medium text-foreground">
+              {breadcrumb.icon && <breadcrumb.icon className="h-4 w-4 inline mr-1" />}
+              {breadcrumb.name}
+            </span>
+          ) : (
+            // Links navegáveis
+            <Link
+              to={breadcrumb.path}
+              className="hover:text-foreground transition-colors flex items-center"
+            >
+              {breadcrumb.icon && <breadcrumb.icon className="h-4 w-4 mr-1" />}
+              {breadcrumb.name}
+            </Link>
+          )}
+        </div>
+      ))}
     </nav>
   )
 }
-
-export default Breadcrumb
