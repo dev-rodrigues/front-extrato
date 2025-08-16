@@ -1,137 +1,286 @@
+/**
+ * AccountQueryForm - Formulário de consulta de contas conforme RFCs
+ * Baseado em RFC-Frontend-Interface.md - Consulta de Contas
+ */
+
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Search, Calendar } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CalendarIcon, Search, Building2, CreditCard } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
+// Schema de validação conforme RFCs
 const accountQuerySchema = z.object({
   agencia: z.string()
-    .length(4, 'Agência deve ter 4 dígitos')
+    .length(4, 'Agência deve ter exatamente 4 dígitos')
     .regex(/^\d{4}$/, 'Agência deve conter apenas números'),
   contaCorrente: z.string()
-    .regex(/^\d{2}\.\d{3}-\d$/, 'Formato: XX.XXX-X'),
-  dataInicio: z.string().min(1, 'Data de início é obrigatória'),
-  dataFim: z.string().min(1, 'Data de fim é obrigatória'),
+    .regex(/^(\d{2}\.\d{3}-\d|\d{5}-\d)$/, 'Formato inválido: XX.XXX-X ou XXXXX-X'),
+  periodo: z.enum(['mesAno', 'datasEspecificas']),
+  mes: z.number().min(1).max(12).optional(),
+  ano: z.number().min(2000).max(2100).optional(),
+  dataInicio: z.string().optional(),
+  dataFim: z.string().optional()
+}).refine((data) => {
+  // Validação: mês/ano OU datas específicas, não ambos
+  if (data.periodo === 'mesAno') {
+    return data.mes && data.ano && !data.dataInicio && !data.dataFim
+  } else {
+    return data.dataInicio && data.dataFim && !data.mes && !data.ano
+  }
+}, {
+  message: 'Selecione mês/ano OU datas específicas, não ambos',
+  path: ['periodo']
+}).refine((data) => {
+  // Validação: data início <= data fim
+  if (data.dataInicio && data.dataFim) {
+    return new Date(data.dataInicio) <= new Date(data.dataFim)
+  }
+  return true
+}, {
+  message: 'Data de início deve ser menor ou igual à data de fim',
+  path: ['dataFim']
 })
 
 type AccountQueryFormData = z.infer<typeof accountQuerySchema>
 
 interface AccountQueryFormProps {
-  onSubmit: (data: AccountQueryFormData) => void
-  isLoading?: boolean
+  onSubmit?: (data: AccountQueryFormData) => void
+  loading?: boolean
 }
 
-export const AccountQueryForm = ({ onSubmit, isLoading = false }: AccountQueryFormProps) => {
-  const form = useForm<AccountQueryFormData>({
+/**
+ * Formulário de consulta de contas bancárias
+ * Implementa validações conforme RFCs:
+ * - Agência: 4 dígitos
+ * - Conta: XX.XXX-X ou XXXXX-X
+ * - Período: mês/ano OU datas específicas (não ambos)
+ * - Validação de datas
+ */
+export function AccountQueryForm({ onSubmit, loading }: AccountQueryFormProps) {
+  const navigate = useNavigate()
+  const [periodType, setPeriodType] = useState<'mesAno' | 'datasEspecificas'>('mesAno')
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+    setValue
+  } = useForm<AccountQueryFormData>({
     resolver: zodResolver(accountQuerySchema),
-    defaultValues: {
-      agencia: '',
-      contaCorrente: '',
-      dataInicio: '',
-      dataFim: '',
-    }
+    mode: 'onChange'
   })
 
-  const handleSubmit = (data: AccountQueryFormData) => {
-    onSubmit(data)
+
+
+  const handleFormSubmit = (data: AccountQueryFormData) => {
+    if (onSubmit) {
+      onSubmit(data)
+    } else {
+      // Navegação padrão para detalhes da conta
+      const params = new URLSearchParams()
+      
+      if (data.periodo === 'mesAno' && data.mes && data.ano) {
+        params.append('mes', data.mes.toString())
+        params.append('ano', data.ano.toString())
+      } else if (data.periodo === 'datasEspecificas' && data.dataInicio && data.dataFim) {
+        params.append('dataInicio', data.dataInicio)
+        params.append('dataFim', data.dataFim)
+      }
+
+      const queryString = params.toString()
+      const url = `/accounts/${data.agencia}/${data.contaCorrente}${queryString ? `?${queryString}` : ''}`
+      
+      navigate(url)
+    }
+  }
+
+  const handlePeriodTypeChange = (value: string) => {
+    const newPeriodType = value as 'mesAno' | 'datasEspecificas'
+    setPeriodType(newPeriodType)
+    setValue('periodo', newPeriodType)
+    
+    // Limpar campos do outro tipo
+    if (newPeriodType === 'mesAno') {
+      setValue('dataInicio', undefined)
+      setValue('dataFim', undefined)
+    } else {
+      setValue('mes', undefined)
+      setValue('ano', undefined)
+    }
   }
 
   return (
-    <Card>
+    <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Search className="h-5 w-5" />
-          Consulta de Conta
+          Consulta de Conta Bancária
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+          {/* Dados da Conta */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Agência */}
             <div className="space-y-2">
-              <Label htmlFor="agencia">Agência</Label>
+              <Label htmlFor="agencia" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Agência
+              </Label>
               <Input
                 id="agencia"
-                placeholder="1234"
+                placeholder="0000"
                 maxLength={4}
-                {...form.register('agencia')}
+                {...register('agencia')}
+                className={errors.agencia ? 'border-red-500' : ''}
               />
-              {form.formState.errors.agencia && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.agencia.message}
-                </p>
+              {errors.agencia && (
+                <p className="text-sm text-red-500">{errors.agencia.message}</p>
               )}
             </div>
-            
+
+            {/* Conta Corrente */}
             <div className="space-y-2">
-              <Label htmlFor="contaCorrente">Conta Corrente</Label>
+              <Label htmlFor="contaCorrente" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Conta Corrente
+              </Label>
               <Input
                 id="contaCorrente"
-                placeholder="12.345-6"
-                {...form.register('contaCorrente')}
+                placeholder="XX.XXX-X ou XXXXX-X"
+                {...register('contaCorrente')}
+                className={errors.contaCorrente ? 'border-red-500' : ''}
               />
-              {form.formState.errors.contaCorrente && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.contaCorrente.message}
-                </p>
+              {errors.contaCorrente && (
+                <p className="text-sm text-red-500">{errors.contaCorrente.message}</p>
               )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="dataInicio">Data Início</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          {/* Tipo de Período */}
+          <div className="space-y-2">
+            <Label>Tipo de Período</Label>
+            <Select value={periodType} onValueChange={handlePeriodTypeChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mesAno">Mês e Ano</SelectItem>
+                <SelectItem value="datasEspecificas">Datas Específicas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Campos de Período */}
+          {periodType === 'mesAno' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Mês */}
+              <div className="space-y-2">
+                <Label htmlFor="mes">Mês</Label>
+                <Select onValueChange={(value) => setValue('mes', parseInt(value))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o mês" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((mes) => (
+                      <SelectItem key={mes} value={mes.toString()}>
+                        {new Date(2000, mes - 1).toLocaleDateString('pt-BR', { month: 'long' })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.mes && (
+                  <p className="text-sm text-red-500">{errors.mes.message}</p>
+                )}
+              </div>
+
+              {/* Ano */}
+              <div className="space-y-2">
+                <Label htmlFor="ano">Ano</Label>
+                <Select onValueChange={(value) => setValue('ano', parseInt(value))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o ano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 25 }, (_, i) => new Date().getFullYear() - 12 + i).map((ano) => (
+                      <SelectItem key={ano} value={ano.toString()}>
+                        {ano}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.ano && (
+                  <p className="text-sm text-red-500">{errors.ano.message}</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Data Início */}
+              <div className="space-y-2">
+                <Label htmlFor="dataInicio" className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4" />
+                  Data de Início
+                </Label>
                 <Input
                   id="dataInicio"
                   type="date"
-                  className="pl-10"
-                  {...form.register('dataInicio')}
+                  {...register('dataInicio')}
+                  className={errors.dataInicio ? 'border-red-500' : ''}
                 />
+                {errors.dataInicio && (
+                  <p className="text-sm text-red-500">{errors.dataInicio.message}</p>
+                )}
               </div>
-              {form.formState.errors.dataInicio && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.dataInicio.message}
-                </p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="dataFim">Data Fim</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+              {/* Data Fim */}
+              <div className="space-y-2">
+                <Label htmlFor="dataFim" className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4" />
+                  Data de Fim
+                </Label>
                 <Input
                   id="dataFim"
                   type="date"
-                  className="pl-10"
-                  {...form.register('dataFim')}
+                  {...register('dataFim')}
+                  className={errors.dataFim ? 'border-red-500' : ''}
                 />
+                {errors.dataFim && (
+                  <p className="text-sm text-red-500">{errors.dataFim.message}</p>
+                )}
               </div>
-              {form.formState.errors.dataFim && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.dataFim.message}
-                </p>
-              )}
             </div>
-          </div>
+          )}
 
+          {/* Erro geral do formulário */}
+          {errors.periodo && (
+            <div className="bg-red-50 border border-red-200 rounded p-3">
+              <p className="text-sm text-red-700">{errors.periodo.message}</p>
+            </div>
+          )}
+
+          {/* Botão de Envio */}
           <Button 
             type="submit" 
-            disabled={isLoading || !form.formState.isValid}
-            className="w-full"
+            className="w-full" 
+            disabled={!isValid || loading}
           >
-            {isLoading ? (
+            {loading ? (
               <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 Consultando...
               </>
             ) : (
               <>
-                <Search className="mr-2 h-4 w-4" />
-                Consultar
+                <Search className="h-4 w-4 mr-2" />
+                Consultar Conta
               </>
             )}
           </Button>

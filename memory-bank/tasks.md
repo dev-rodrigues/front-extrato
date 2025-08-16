@@ -1,53 +1,50 @@
-# 📋 **TAREFAS ATIVAS**
+# Tipo da Tarefa
+feature | bugfix | refactor | test | doc
 
-## 🆕 **Nova Tarefa**
-*Nenhuma tarefa ativa no momento.*
+# Descrição
+Explique o objetivo e o problema que resolve.
 
----
+# Contexto (arquivos/trechos)
+- src/... (caminho exato)
+- src/...
 
-## 📚 **Tarefas Arquivadas**
-- **TASK-003**: ✅ Consolidação Backend-Frontend BB Extrato - **CONCLUÍDA**
-  - *Arquivada em: Janeiro 2025*
-  - *Status: Sistema completamente funcional*
+# Critérios de Aceite
+- [ ] ...
+- [ ] ...
 
----
+# Plano (curto)
+1) ...
+2) ...
+3) ...
 
-## 🎯 **Próximos Passos**
-Para iniciar uma nova tarefa, crie uma nova entrada seguindo o formato:
+# Testes
+- Unit: ...
+- Integration: ...
 
-```markdown
-# TASK-[ID]: [Título da Tarefa]
+# Dependências
+- Manter: ...
+- Implementar: ...
 
-## 📋 **Contexto da Tarefa**
-[Descrição do contexto e objetivo]
+# Observações Importantes
+- PRIORIDADE: ...
+- OBJETIVO: ...
 
-## 🎯 **Objetivo Principal**
-[Objetivo claro e específico]
+# Status da Tarefa
+**AGUARDANDO NOVA TAREFA** 📋
 
-## ✅ **Critérios de Aceitação**
-- [ ] [Critério 1]
-- [ ] [Critério 2]
+## Próxima Tarefa:
+Aguardando instruções para nova implementação.
 
-## 📅 **Plano Detalhado**
-### 🔄 **ETAPA 1: [Nome da Etapa]**
-- [ ] [Tarefa 1]
-- [ ] [Tarefa 2]
-
-## 🧪 **Estratégia de Testes**
-[Como a tarefa será testada]
-
-## ⏱️ **Estimativa de Tempo**
-[Estimativa para cada etapa]
-
-## 🚨 **Prioridade**
-[ALTA/MÉDIA/BAIXA]
-
-## 📝 **Observações**
-[Observações importantes]
-```
-
----
-
-**Última atualização**: Janeiro 2025  
-**Sistema**: BB Extrato Frontend  
-**Status**: ✅ Pronto para nova tarefa
+## Tarefas Concluídas:
+- ✅ TASK-001: Refatoração inicial do projeto
+- ✅ TASK-003: QA e validação
+- ✅ TASK-006: Correção de bugs pós-refatoração
+- ✅ TASK-007: Refatoração de header e footer
+- ✅ TASK-008: Correção de menu mobile
+- ✅ TASK-009: Padronização da página Accounts
+- ✅ TASK-010: Refatoração do menu mobile com shadcn
+- ✅ TASK-011: Implementação da logo GiKiwiBird
+- ✅ TASK-012: Remoção dos cards "Ações Rápidas"
+- ✅ TASK-013: Simplificação do footer
+- ✅ TASK-014: Logo no menu mobile
+- ✅ TASK-015: Correção de bug de NaN

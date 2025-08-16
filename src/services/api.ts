@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
+import type { AxiosInstance, AxiosResponse, AxiosError } from 'axios'
 
 /**
  * Configuração base da API para integração com backend
@@ -27,43 +27,7 @@ const isDevelopment = import.meta.env.DEV
 const config = isDevelopment ? API_CONFIG.development : API_CONFIG.production
 
 // Interface para configuração de retry
-interface RetryConfig {
-  retryAttempts: number
-  retryDelay: number
-}
 
-// Classe para gerenciar tentativas de retry
-class RetryManager {
-  private retryCount = 0
-  private retryAttempts: number
-  private retryDelay: number
-
-  constructor(config: RetryConfig) {
-    this.retryAttempts = config.retryAttempts
-    this.retryDelay = config.retryDelay
-  }
-
-  shouldRetry(error: AxiosError): boolean {
-    // Retry apenas para erros de rede ou 5xx
-    const isNetworkError = !error.response
-    const isServerError = error.response?.status && error.response.status >= 500
-    
-    return Boolean((isNetworkError || isServerError) && this.retryCount < this.retryAttempts)
-  }
-
-  async retry<T>(requestFn: () => Promise<T>): Promise<T> {
-    this.retryCount++
-    
-    // Aguardar antes de tentar novamente
-    await new Promise(resolve => setTimeout(resolve, this.retryDelay * this.retryCount))
-    
-    return requestFn()
-  }
-
-  reset(): void {
-    this.retryCount = 0
-  }
-}
 
 // Criar instância do axios com configurações base
 const api: AxiosInstance = axios.create({
