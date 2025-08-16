@@ -1,673 +1,606 @@
-import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect } from 'react'
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Download, 
+  RefreshCw, 
+  Eye,
+  Calendar,
+  Building2,
+  CreditCard,
+  AlertCircle
+} from 'lucide-react'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table'
-import { 
-  Search, 
-  Download, 
-  Share2, 
-  Filter, 
-  RefreshCw,
-  FileText,
-  Calendar,
-  DollarSign,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  Clock
-} from 'lucide-react'
-import { 
-  getQueryLogs, 
-  getImports, 
-  getMovements,
-  type QueryLogResponse,
-  type ImportResponse,
-  type MovementResponse,
-  type PaginationResponse
-} from '@/services/accountService'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-/**
- * Componente para exibir resultados de consulta com dados reais da API
- * Suporta filtros, paginação e exportação
- */
+import type { 
+  AccountQueryLogResponse, 
+  AccountImportResponse, 
+  AccountMovementResponse,
+  PaginationResponse 
+} from '@/types/api'
 
 interface QueryResultsProps {
-  queryData: {
-    agencia: string
-    contaCorrente: string
-    dataInicio: string
-    dataFim: string
-    tipoConsulta: 'logs' | 'imports' | 'movements' | 'all'
-  }
-  onNewQuery?: () => void
+  agencia: string
+  contaCorrente: string
+  dataInicio: Date
+  dataFim: Date
+  tipoConsulta: 'logs' | 'imports' | 'movements' | 'all'
+  onRefresh?: () => void
+  onExport?: (data: any) => void
 }
 
-interface FilterState {
-  search: string
-  status: string
-  dateRange: string
-  minValue?: number
-  maxValue?: number
-}
-
-export const QueryResults: React.FC<QueryResultsProps> = ({
-  queryData,
-  onNewQuery
-}) => {
-  const [results, setResults] = useState<{
-    logs: PaginationResponse<QueryLogResponse> | null
-    imports: PaginationResponse<ImportResponse> | null
-    movements: PaginationResponse<MovementResponse> | null
-  }>({
-    logs: null,
-    imports: null,
-    movements: null
-  })
-  
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [filters, setFilters] = useState<FilterState>({
-    search: '',
-    status: 'all',
-    dateRange: 'all'
-  })
+/**
+ * Componente para exibir resultados de consulta com paginação
+ * Suporta logs, importações e movimentações
+ */
+export const QueryResults = ({
+  agencia,
+  contaCorrente,
+  dataInicio,
+  dataFim,
+  tipoConsulta,
+  onRefresh,
+  onExport
+}: QueryResultsProps) => {
+  const [activeTab, setActiveTab] = useState<'logs' | 'imports' | 'movements'>('logs')
+  const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
+  const [loading, setLoading] = useState(false)
 
-  // Carregar dados da consulta
-  const loadQueryData = async () => {
+  // Dados mockados para demonstração (substituir por dados reais da API)
+  const [logs, setLogs] = useState<PaginationResponse<AccountQueryLogResponse> | null>(null)
+  const [imports, setImports] = useState<PaginationResponse<AccountImportResponse> | null>(null)
+  const [movements, setMovements] = useState<PaginationResponse<AccountMovementResponse> | null>(null)
+
+  // Carregar dados iniciais
+  useEffect(() => {
+    loadData()
+  }, [agencia, contaCorrente, dataInicio, dataFim, currentPage, pageSize])
+
+  // Carregar dados baseado no tipo de consulta
+  const loadData = async () => {
     setLoading(true)
-    setError(null)
-
+    
     try {
-      const { agencia, contaCorrente, dataInicio, dataFim, tipoConsulta } = queryData
-      const params = {
-        agencia,
-        contaCorrente,
-        dataInicio: new Date(dataInicio),
-        dataFim: new Date(dataFim),
-        page: currentPage,
-        size: pageSize
-      }
-
-      const promises: Promise<any>[] = []
-
-      if (tipoConsulta === 'all' || tipoConsulta === 'logs') {
-        promises.push(getQueryLogs(params))
-      }
-      if (tipoConsulta === 'all' || tipoConsulta === 'imports') {
-        promises.push(getImports(params))
-      }
-      if (tipoConsulta === 'all' || tipoConsulta === 'movements') {
-        promises.push(getMovements(params))
-      }
-
-      const results = await Promise.all(promises)
+      // Simular chamadas à API (substituir por chamadas reais)
+      await new Promise(resolve => setTimeout(resolve, 1000))
       
-      let index = 0
       if (tipoConsulta === 'all' || tipoConsulta === 'logs') {
-        setResults(prev => ({ ...prev, logs: results[index++] }))
+        setLogs(generateMockLogs())
       }
+      
       if (tipoConsulta === 'all' || tipoConsulta === 'imports') {
-        setResults(prev => ({ ...prev, imports: results[index++] }))
+        setImports(generateMockImports())
       }
+      
       if (tipoConsulta === 'all' || tipoConsulta === 'movements') {
-        setResults(prev => ({ ...prev, movements: results[index++] }))
+        setMovements(generateMockMovements())
       }
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar dados da consulta')
-      console.error('❌ Erro ao carregar resultados:', err)
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  // Carregar dados quando queryData ou paginação mudar
-  useEffect(() => {
-    if (queryData.agencia && queryData.contaCorrente) {
-      loadQueryData()
-    }
-  }, [queryData, currentPage, pageSize])
+  // Gerar dados mockados para logs
+  const generateMockLogs = (): PaginationResponse<AccountQueryLogResponse> => {
+    const mockLogs: AccountQueryLogResponse[] = Array.from({ length: pageSize }, (_, i) => ({
+      id: `log-${currentPage * pageSize + i + 1}`,
+      banco: '001',
+      agencia,
+      contaCorrente,
+      consultaPeriodoDe: dataInicio,
+      consultaPeriodoAte: dataFim,
+      erroCodigo: Math.random() > 0.8 ? 500 : 0,
+      erroDescricao: Math.random() > 0.8 ? 'Erro interno do servidor' : undefined,
+      dataHoraTentativa: new Date(Date.now() - Math.random() * 86400000),
+      dataHora: new Date(Date.now() - Math.random() * 86400000),
+      status: Math.random() > 0.8 ? 'ERROR' : 'SUCCESS'
+    }))
 
-  // Aplicar filtros
-  const applyFilters = (data: any[], filterState: FilterState) => {
-    return data.filter(item => {
-      // Filtro de busca
-      if (filterState.search) {
-        const searchLower = filterState.search.toLowerCase()
-        const searchableFields = Object.values(item).join(' ').toLowerCase()
-        if (!searchableFields.includes(searchLower)) {
-          return false
-        }
-      }
-
-      // Filtro de status
-      if (filterState.status !== 'all') {
-        if (item.erroCodigo !== undefined && filterState.status === 'error' && item.erroCodigo === 0) {
-          return false
-        }
-        if (item.erroCodigo !== undefined && filterState.status === 'success' && item.erroCodigo !== 0) {
-          return false
-        }
-      }
-
-      // Filtro de valor (para movimentações)
-      if (filterState.minValue !== undefined && item.movimentoValor !== undefined) {
-        if (item.movimentoValor < filterState.minValue) return false
-      }
-      if (filterState.maxValue !== undefined && item.movimentoValor !== undefined) {
-        if (item.movimentoValor > filterState.maxValue) return false
-      }
-
-      return true
-    })
-  }
-
-  // Exportar dados
-  const exportData = (format: 'csv' | 'json') => {
-    const { agencia, contaCorrente } = queryData
-    let dataToExport: any[] = []
-
-    // Coletar dados baseado no tipo de consulta
-    if (queryData.tipoConsulta === 'all' || queryData.tipoConsulta === 'logs') {
-      if (results.logs) {
-        dataToExport.push(...results.logs.content)
-      }
-    }
-    if (queryData.tipoConsulta === 'all' || queryData.tipoConsulta === 'imports') {
-      if (results.imports) {
-        dataToExport.push(...results.imports.content)
-      }
-    }
-    if (queryData.tipoConsulta === 'all' || queryData.tipoConsulta === 'movements') {
-      if (results.movements) {
-        dataToExport.push(...results.movements.content)
-      }
-    }
-
-    // Aplicar filtros
-    dataToExport = applyFilters(dataToExport, filters)
-
-    if (format === 'csv') {
-      exportToCSV(dataToExport, `${agencia}_${contaCorrente}_${queryData.tipoConsulta}`)
-    } else {
-      exportToJSON(dataToExport, `${agencia}_${contaCorrente}_${queryData.tipoConsulta}`)
+    return {
+      content: mockLogs,
+      pageNumber: currentPage,
+      pageSize,
+      totalElements: 150,
+      totalPages: Math.ceil(150 / pageSize),
+      hasNext: currentPage < Math.ceil(150 / pageSize) - 1,
+      hasPrevious: currentPage > 0,
+      isFirst: currentPage === 0,
+      isLast: currentPage === Math.ceil(150 / pageSize) - 1
     }
   }
 
-  const exportToCSV = (data: any[], filename: string) => {
-    if (data.length === 0) return
+  // Gerar dados mockados para importações
+  const generateMockImports = (): PaginationResponse<AccountImportResponse> => {
+    const mockImports: AccountImportResponse[] = Array.from({ length: pageSize }, (_, i) => ({
+      id: `import-${currentPage * pageSize + i + 1}`,
+      layoutId: '2',
+      arquivoNome: `IMPORTED_WITH_API_${currentPage * pageSize + i + 1}`,
+      arquivoGeracaoDataHora: new Date(Date.now() - Math.random() * 86400000),
+      qtdRegistros: Math.floor(Math.random() * 1000) + 100,
+      qtdContas: 1,
+      dataHora: new Date(Date.now() - Math.random() * 86400000),
+      consultaAgencia: agencia,
+      consultaContaCorrente: contaCorrente,
+      consultaPeriodoDe: dataInicio,
+      consultaPeriodoAte: dataFim,
+      status: Math.random() > 0.9 ? 'ERROR' : Math.random() > 0.7 ? 'PROCESSING' : 'SUCCESS'
+    }))
 
-    const headers = Object.keys(data[0])
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => 
-        headers.map(header => {
-          const value = row[header]
-          return typeof value === 'string' ? `"${value}"` : value
-        }).join(',')
+    return {
+      content: mockImports,
+      pageNumber: currentPage,
+      pageSize,
+      totalElements: 75,
+      totalPages: Math.ceil(75 / pageSize),
+      hasNext: currentPage < Math.ceil(75 / pageSize) - 1,
+      hasPrevious: currentPage > 0,
+      isFirst: currentPage === 0,
+      isLast: currentPage === Math.ceil(75 / pageSize) - 1
+    }
+  }
+
+  // Gerar dados mockados para movimentações
+  const generateMockMovements = (): PaginationResponse<AccountMovementResponse> => {
+    const mockMovements: AccountMovementResponse[] = Array.from({ length: pageSize }, (_, i) => ({
+      id: `movement-${currentPage * pageSize + i + 1}`,
+      numeroSequencialExtrato: `${currentPage * pageSize + i + 1}`,
+      movimentoData: new Date(Date.now() - Math.random() * 86400000),
+      movimentoTipo: Math.random() > 0.5 ? 'C' : 'D',
+      movimentoValor: Math.floor(Math.random() * 10000) + 100,
+      movimentoSaldo: Math.floor(Math.random() * 50000) + 1000,
+      posicaoSaldo: Math.random() > 0.5 ? '+' : '-',
+      descricaoHistorico: [
+        'TRANSFERENCIA DOC',
+        'PAGAMENTO BOLETO',
+        'DEPOSITO',
+        'SAQUE',
+        'TED'
+      ][Math.floor(Math.random() * 5)],
+      documentoNumero: Math.floor(Math.random() * 1000000000).toString(),
+      numeroCpfCnpjContrapartida: Math.floor(Math.random() * 100000000000).toString(),
+      agencia,
+      contaCorrente
+    }))
+
+    return {
+      content: mockMovements,
+      pageNumber: currentPage,
+      pageSize,
+      totalElements: 300,
+      totalPages: Math.ceil(300 / pageSize),
+      hasNext: currentPage < Math.ceil(300 / pageSize) - 1,
+      hasPrevious: currentPage > 0,
+      isFirst: currentPage === 0,
+      isLast: currentPage === Math.ceil(300 / pageSize) - 1
+    }
+  }
+
+  // Filtrar dados por busca
+  const filterData = (data: any[], query: string) => {
+    if (!query) return data
+    return data.filter(item => 
+      Object.values(item).some(value => 
+        String(value).toLowerCase().includes(query.toLowerCase())
       )
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    window.URL.revokeObjectURL(url)
+    )
   }
 
-  const exportToJSON = (data: any[], filename: string) => {
-    const jsonContent = JSON.stringify(data, null, 2)
-    const blob = new Blob([jsonContent], { type: 'application/json' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${filename}_${new Date().toISOString().split('T')[0]}.json`
-    a.click()
-    window.URL.revokeObjectURL(url)
-  }
-
-  // Compartilhar consulta
-  const shareQuery = () => {
-    const shareData = {
-      title: 'Consulta de Extrato Bancário',
-      text: `Consulta para Ag. ${queryData.agencia} / Conta ${queryData.contaCorrente}`,
-      url: window.location.href
+  // Obter dados filtrados para a aba ativa
+  const getFilteredData = () => {
+    let data: any[] = []
+    
+    switch (activeTab) {
+      case 'logs':
+        data = logs?.content || []
+        break
+      case 'imports':
+        data = imports?.content || []
+        break
+      case 'movements':
+        data = movements?.content || []
+        break
     }
+    
+    return filterData(data, searchQuery)
+  }
 
-    if (navigator.share) {
-      navigator.share(shareData)
-    } else {
-      // Fallback para copiar URL
-      navigator.clipboard.writeText(window.location.href)
-      alert('URL copiada para a área de transferência!')
+  // Obter paginação para a aba ativa
+  const getPagination = () => {
+    switch (activeTab) {
+      case 'logs':
+        return logs
+      case 'imports':
+        return imports
+      case 'movements':
+        return movements
+      default:
+        return null
     }
   }
 
-  // Renderizar tabela de logs
-  const renderLogsTable = () => {
-    if (!results.logs) return null
-
-    const filteredData = applyFilters(results.logs.content, filters)
-
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Logs de Consulta</h3>
-          <Badge variant="outline">
-            {filteredData.length} de {results.logs.totalElements} resultados
-          </Badge>
-        </div>
-
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Data/Hora</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Período</TableHead>
-              <TableHead>Descrição</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredData.map((log) => (
-              <TableRow key={log.id}>
-                <TableCell>
-                  {new Date(log.dataHora).toLocaleString('pt-BR')}
-                </TableCell>
-                <TableCell>
-                  <Badge 
-                    variant={log.erroCodigo === 0 ? 'default' : 'destructive'}
-                    className="flex items-center space-x-1"
-                  >
-                    {log.erroCodigo === 0 ? (
-                      <CheckCircle className="h-3 w-3" />
-                    ) : (
-                      <XCircle className="h-3 w-3" />
-                    )}
-                    <span>{log.erroCodigo === 0 ? 'Sucesso' : 'Erro'}</span>
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {new Date(log.consultaPeriodoDe).toLocaleDateString('pt-BR')} - 
-                  {new Date(log.consultaPeriodoAte).toLocaleDateString('pt-BR')}
-                </TableCell>
-                <TableCell>
-                  {log.erroDescricao || 'Consulta realizada com sucesso'}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    )
+  // Navegar para página
+  const goToPage = (page: number) => {
+    setCurrentPage(page)
   }
 
-  // Renderizar tabela de importações
-  const renderImportsTable = () => {
-    if (!results.imports) return null
-
-    const filteredData = applyFilters(results.imports.content, filters)
-
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Histórico de Importações</h3>
-          <Badge variant="outline">
-            {filteredData.length} de {results.imports.totalElements} resultados
-          </Badge>
-        </div>
-
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Data/Hora</TableHead>
-              <TableHead>Arquivo</TableHead>
-              <TableHead>Registros</TableHead>
-              <TableHead>Contas</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredData.map((importItem) => (
-              <TableRow key={importItem.id}>
-                <TableCell>
-                  {importItem.dataHora ? 
-                    new Date(importItem.dataHora).toLocaleString('pt-BR') : 
-                    'N/A'
-                  }
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <span>{importItem.arquivoNome || 'N/A'}</span>
-                  </div>
-                </TableCell>
-                <TableCell>{importItem.qtdRegistros || 'N/A'}</TableCell>
-                <TableCell>{importItem.qtdContas || 'N/A'}</TableCell>
-                <TableCell>
-                  <Badge variant="default" className="bg-green-500">
-                    ✅ Concluída
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    )
+  // Alterar tamanho da página
+  const changePageSize = (size: number) => {
+    setPageSize(size)
+    setCurrentPage(0)
   }
 
-  // Renderizar tabela de movimentações
-  const renderMovementsTable = () => {
-    if (!results.movements) return null
-
-    const filteredData = applyFilters(results.movements.content, filters)
-
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Movimentações Bancárias</h3>
-          <Badge variant="outline">
-            {filteredData.length} de {results.movements.totalElements} resultados
-          </Badge>
-        </div>
-
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Data</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Valor</TableHead>
-              <TableHead>Saldo</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredData.map((movement) => (
-              <TableRow key={movement.id}>
-                <TableCell>
-                  {movement.movimentoData ? 
-                    new Date(movement.movimentoData).toLocaleDateString('pt-BR') : 
-                    'N/A'
-                  }
-                </TableCell>
-                <TableCell>
-                  <div className="max-w-xs truncate">
-                    {movement.descricaoHistorico || 'N/A'}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge 
-                    variant={movement.movimentoTipo === 'C' ? 'default' : 'secondary'}
-                    className={movement.movimentoTipo === 'C' ? 'bg-green-500' : 'bg-red-500'}
-                  >
-                    {movement.movimentoTipo === 'C' ? 'Crédito' : 'Débito'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-1">
-                    <DollarSign className="h-3 w-3 text-muted-foreground" />
-                    <span>
-                      {movement.movimentoValor ? 
-                        movement.movimentoValor.toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        }) : 
-                        'N/A'
-                      }
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {movement.movimentoSaldo ? 
-                    movement.movimentoSaldo.toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    }) : 
-                    'N/A'
-                  }
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    )
+  // Exportar dados da aba ativa
+  const handleExport = () => {
+    if (!onExport) return
+    
+    const data = getFilteredData()
+    const exportData = {
+      tipo: activeTab.toUpperCase(),
+      dados: data,
+      filtros: {
+        agencia,
+        contaCorrente,
+        dataInicio,
+        dataFim,
+        busca: searchQuery
+      }
+    }
+    
+    onExport(exportData)
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Carregando resultados da consulta...</p>
-        </div>
-      </div>
-    )
+  // Obter status badge
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'SUCCESS':
+        return <Badge variant="default" className="bg-green-500">✅ Sucesso</Badge>
+      case 'ERROR':
+        return <Badge variant="destructive">❌ Erro</Badge>
+      case 'PENDING':
+        return <Badge variant="secondary">⏳ Pendente</Badge>
+      case 'PROCESSING':
+        return <Badge variant="outline">🔄 Processando</Badge>
+      default:
+        return <Badge variant="outline">{status}</Badge>
+    }
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
-          <p className="text-red-500 mb-4">{error}</p>
-          <Button onClick={loadQueryData} variant="outline">
-            Tentar Novamente
-          </Button>
-        </div>
-      </div>
-    )
+  // Obter tipo de movimento badge
+  const getMovementTypeBadge = (tipo: string) => {
+    switch (tipo) {
+      case 'C':
+        return <Badge variant="default" className="bg-green-500">Crédito</Badge>
+      case 'D':
+        return <Badge variant="destructive">Débito</Badge>
+      default:
+        return <Badge variant="outline">{tipo}</Badge>
+    }
   }
+
+  const filteredData = getFilteredData()
+  const pagination = getPagination()
 
   return (
     <div className="space-y-6">
-      {/* Header dos Resultados */}
+      {/* Cabeçalho com informações da consulta */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center space-x-2">
-                <Search className="h-5 w-5" />
-                <span>Resultados da Consulta</span>
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Ag. {queryData.agencia} / Conta {queryData.contaCorrente} • 
-                {new Date(queryData.dataInicio).toLocaleDateString('pt-BR')} - 
-                {new Date(queryData.dataFim).toLocaleDateString('pt-BR')}
-              </p>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Button
-                onClick={() => exportData('csv')}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-2"
-              >
-                <Download className="h-4 w-4" />
-                <span>CSV</span>
-              </Button>
-              
-              <Button
-                onClick={() => exportData('json')}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-2"
-              >
-                <Download className="h-4 w-4" />
-                <span>JSON</span>
-              </Button>
-              
-              <Button
-                onClick={shareQuery}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-2"
-              >
-                <Share2 className="h-4 w-4" />
-                <span>Compartilhar</span>
-              </Button>
-              
-              {onNewQuery && (
-                <Button
-                  onClick={onNewQuery}
-                  variant="default"
-                  size="sm"
-                  className="flex items-center space-x-2"
-                >
-                  <Search className="h-4 w-4" />
-                  <span>Nova Consulta</span>
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Filter className="h-5 w-5" />
-            <span>Filtros</span>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Resultados da Consulta
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Buscar</Label>
-              <Input
-                placeholder="Buscar em todos os campos..."
-                value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span><strong>Agência:</strong> {agencia}</span>
             </div>
-            
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <select
-                className="w-full p-2 border rounded-md"
-                value={filters.status}
-                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              >
-                <option value="all">Todos</option>
-                <option value="success">Sucesso</option>
-                <option value="error">Erro</option>
-              </select>
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <span><strong>Conta:</strong> {contaCorrente}</span>
             </div>
-            
-            <div className="space-y-2">
-              <Label>Valor Mínimo</Label>
-              <Input
-                type="number"
-                placeholder="0.00"
-                value={filters.minValue || ''}
-                onChange={(e) => setFilters(prev => ({ 
-                  ...prev, 
-                  minValue: e.target.value ? parseFloat(e.target.value) : undefined 
-                }))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Valor Máximo</Label>
-              <Input
-                type="number"
-                placeholder="999999.99"
-                value={filters.maxValue || ''}
-                onChange={(e) => setFilters(prev => ({ 
-                  ...prev, 
-                  maxValue: e.target.value ? parseFloat(e.target.value) : undefined 
-                }))}
-              />
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span>
+                <strong>Período:</strong> {format(dataInicio, 'dd/MM/yyyy', { locale: ptBR })} - {format(dataFim, 'dd/MM/yyyy', { locale: ptBR })}
+              </span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Resultados */}
-      <div className="space-y-6">
-        {queryData.tipoConsulta === 'all' || queryData.tipoConsulta === 'logs' ? (
-          <Card>
-            <CardContent className="pt-6">
-              {renderLogsTable()}
-            </CardContent>
-          </Card>
-        ) : null}
+      {/* Controles de busca e filtros */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="flex gap-2 items-center">
+          <Input
+            placeholder="Buscar..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-64"
+          />
+          <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
+            Limpar
+          </Button>
+        </div>
 
-        {queryData.tipoConsulta === 'all' || queryData.tipoConsulta === 'imports' ? (
-          <Card>
-            <CardContent className="pt-6">
-              {renderImportsTable()}
-            </CardContent>
-          </Card>
-        ) : null}
+        <div className="flex gap-2">
+          <Select value={pageSize.toString()} onValueChange={(value) => changePageSize(parseInt(value))}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10 por página</SelectItem>
+              <SelectItem value="20">20 por página</SelectItem>
+              <SelectItem value="50">50 por página</SelectItem>
+              <SelectItem value="100">100 por página</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {queryData.tipoConsulta === 'all' || queryData.tipoConsulta === 'movements' ? (
-          <Card>
-            <CardContent className="pt-6">
-              {renderMovementsTable()}
-            </CardContent>
-          </Card>
-        ) : null}
+          <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+
+          {onExport && (
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download className="h-4 w-4" />
+              Exportar
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* Tabs para diferentes tipos de dados */}
+      <Tabs value={activeTab} onValueChange={(value: any) => setActiveTab(value)}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="logs" disabled={tipoConsulta !== 'all' && tipoConsulta !== 'logs'}>
+            Logs de Consulta
+          </TabsTrigger>
+          <TabsTrigger value="imports" disabled={tipoConsulta !== 'all' && tipoConsulta !== 'imports'}>
+            Importações
+          </TabsTrigger>
+          <TabsTrigger value="movements" disabled={tipoConsulta !== 'all' && tipoConsulta !== 'movements'}>
+            Movimentações
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab de Logs */}
+        <TabsContent value="logs" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Logs de Consulta</span>
+                <Badge variant="outline">
+                  {filteredData.length} de {pagination?.totalElements || 0} resultados
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data/Hora</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Período</TableHead>
+                    <TableHead>Erro</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredData.map((log: AccountQueryLogResponse) => (
+                    <TableRow key={log.id}>
+                      <TableCell>
+                        {format(new Date(log.dataHora), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(log.status)}</TableCell>
+                      <TableCell>
+                        {format(new Date(log.consultaPeriodoDe), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
+                        {format(new Date(log.consultaPeriodoAte), 'dd/MM/yyyy', { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        {log.erroCodigo > 0 ? (
+                          <span className="text-red-600 text-sm">
+                            {log.erroCodigo}: {log.erroDescricao}
+                          </span>
+                        ) : (
+                          <span className="text-green-600 text-sm">Sem erros</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab de Importações */}
+        <TabsContent value="imports" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Importações Realizadas</span>
+                <Badge variant="outline">
+                  {filteredData.length} de {pagination?.totalElements || 0} resultados
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data/Hora</TableHead>
+                    <TableHead>Arquivo</TableHead>
+                    <TableHead>Registros</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredData.map((importItem: AccountImportResponse) => (
+                    <TableRow key={importItem.id}>
+                      <TableCell>
+                        {format(new Date(importItem.dataHora!), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {importItem.arquivoNome}
+                      </TableCell>
+                      <TableCell>{importItem.qtdRegistros}</TableCell>
+                      <TableCell>{getStatusBadge(importItem.status)}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab de Movimentações */}
+        <TabsContent value="movements" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Movimentações Bancárias</span>
+                <Badge variant="outline">
+                  {filteredData.length} de {pagination?.totalElements || 0} resultados
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Saldo</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredData.map((movement: AccountMovementResponse) => (
+                    <TableRow key={movement.id}>
+                      <TableCell>
+                        {format(new Date(movement.movimentoData!), 'dd/MM/yyyy', { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>{getMovementTypeBadge(movement.movimentoTipo!)}</TableCell>
+                      <TableCell className="font-mono">
+                        R$ {movement.movimentoValor!.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="font-mono">
+                        R$ {movement.movimentoSaldo!.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {movement.descricaoHistorico}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
       {/* Paginação */}
-      {(results.logs?.totalPages || results.imports?.totalPages || results.movements?.totalPages) && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                Página {currentPage + 1} de {Math.max(
-                  results.logs?.totalPages || 0,
-                  results.imports?.totalPages || 0,
-                  results.movements?.totalPages || 0
-                )}
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === 0}
-                  onClick={() => setCurrentPage(prev => prev - 1)}
-                >
-                  Anterior
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= Math.max(
-                    (results.logs?.totalPages || 0) - 1,
-                    (results.imports?.totalPages || 0) - 1,
-                    (results.movements?.totalPages || 0) - 1
-                  )}
-                  onClick={() => setCurrentPage(prev => prev + 1)}
-                >
-                  Próxima
-                </Button>
-              </div>
+      {pagination && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Mostrando {pagination.pageNumber * pagination.pageSize + 1} - {' '}
+            {Math.min((pagination.pageNumber + 1) * pagination.pageSize, pagination.totalElements)} de {' '}
+            {pagination.totalElements} resultados
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(pagination.pageNumber - 1)}
+              disabled={!pagination.hasPrevious}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Anterior
+            </Button>
+            
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                const page = Math.max(0, Math.min(pagination.totalPages - 1, pagination.pageNumber - 2 + i))
+                return (
+                  <Button
+                    key={page}
+                    variant={page === pagination.pageNumber ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => goToPage(page)}
+                    className="w-8 h-8 p-0"
+                  >
+                    {page + 1}
+                  </Button>
+                )
+              })}
             </div>
-          </CardContent>
-        </Card>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(pagination.pageNumber + 1)}
+              disabled={!pagination.hasNext}
+            >
+              Próximo
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Estado de carregamento */}
+      {loading && (
+        <div className="flex items-center justify-center p-8">
+          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Carregando dados...</span>
+        </div>
+      )}
+
+      {/* Sem resultados */}
+      {!loading && filteredData.length === 0 && (
+        <div className="text-center p-8">
+          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-muted-foreground mb-2">
+            Nenhum resultado encontrado
+          </h3>
+          <p className="text-muted-foreground">
+            Tente ajustar os filtros ou a busca para encontrar os dados desejados.
+          </p>
+        </div>
       )}
     </div>
   )
 }
-
-export default QueryResults

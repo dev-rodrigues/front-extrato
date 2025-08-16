@@ -1,300 +1,367 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { 
   Search, 
-  History, 
+  FileText, 
   Download, 
-  CreditCard,
-  Building2,
-  Calendar,
+  RefreshCw, 
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Clock,
+  Building2,
+  CreditCard
 } from 'lucide-react'
+
 import { AdvancedAccountQueryForm } from '@/components/forms/AdvancedAccountQueryForm'
 import { QueryResults } from './QueryResults'
+import { useAccountQuery } from '@/hooks/useAccountQuery'
+
+import type { AccountQueryFormData, ExportRequest } from '@/schemas/accountQuerySchema'
 
 /**
- * Componente integrado para consulta de conta
- * Combina formulário avançado e resultados em uma única interface
+ * Componente integrado para consulta de contas bancárias
+ * Combina formulário avançado com resultados paginados
  */
+export const IntegratedAccountQuery = () => {
+  const [queryData, setQueryData] = useState<AccountQueryFormData | null>(null)
+  const [showResults, setShowResults] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-interface QueryData {
-  agencia: string
-  contaCorrente: string
-  dataInicio: string
-  dataFim: string
-  tipoConsulta: 'logs' | 'imports' | 'movements' | 'all'
-}
+  // Hook para consulta de contas
+  const {
+    logs,
+    imports,
+    movements,
+    fetchLogs,
+    fetchImports,
+    fetchMovements,
+    fetchAccountData,
+    clearData,
+    hasData,
+    isValidAccount
+  } = useAccountQuery(
+    queryData?.agencia || '',
+    queryData?.contaCorrente || ''
+  )
 
-export const IntegratedAccountQuery: React.FC = () => {
-  const [currentQuery, setCurrentQuery] = useState<QueryData | null>(null)
-  const [activeTab, setActiveTab] = useState<string>('form')
-  const [queryHistory, setQueryHistory] = useState<QueryData[]>([])
-
-  // Executar nova consulta
-  const handleSubmitQuery = (data: any) => {
-    const queryData: QueryData = {
-      agencia: data.agencia,
-      contaCorrente: data.contaCorrente,
-      dataInicio: data.dataInicio,
-      dataFim: data.dataFim,
-      tipoConsulta: data.tipoConsulta
-    }
-
-    setCurrentQuery(queryData)
+  // Manipular envio do formulário
+  const handleSubmit = async (data: AccountQueryFormData) => {
+    setLoading(true)
+    setError(null)
     
-    // Adicionar ao histórico
-    setQueryHistory(prev => [
-      queryData,
-      ...prev.filter(q => 
-        !(q.agencia === data.agencia && q.contaCorrente === data.contaCorrente)
-      )
-    ].slice(0, 10))
+    try {
+      // Validar formato da conta
+      if (!isValidAccount()) {
+        throw new Error('Formato de agência ou conta inválido')
+      }
 
-    // Mudar para aba de resultados
-    setActiveTab('results')
+      // Executar consulta baseada no tipo
+      switch (data.tipoConsulta) {
+        case 'logs':
+          await fetchLogs({
+            dataInicio: data.dataInicio,
+            dataFim: data.dataFim,
+            page: data.page,
+            size: data.size
+          })
+          break
+          
+        case 'imports':
+          await fetchImports({
+            dataInicio: data.dataInicio,
+            dataFim: data.dataFim,
+            page: data.page,
+            size: data.size
+          })
+          break
+          
+        case 'movements':
+          await fetchMovements({
+            dataInicio: data.dataInicio,
+            dataFim: data.dataFim,
+            page: data.page,
+            size: data.size
+          })
+          break
+          
+        case 'all':
+          await fetchAccountData({
+            dataInicio: data.dataInicio,
+            dataFim: data.dataFim,
+            page: data.page,
+            size: data.size
+          })
+          break
+      }
+
+      setQueryData(data)
+      setShowResults(true)
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao executar consulta')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Executar consulta do histórico
-  const executeHistoryQuery = (query: QueryData) => {
-    setCurrentQuery(query)
-    setActiveTab('results')
+  // Manipular exportação
+  const handleExport = async (exportData: ExportRequest) => {
+    try {
+      // Simular exportação (substituir por implementação real)
+      console.log('Exportando dados:', exportData)
+      
+      // Criar arquivo de exemplo
+      const dataStr = JSON.stringify(exportData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: 'application/json' })
+      const url = URL.createObjectURL(dataBlob)
+      
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `consulta_${queryData?.agencia}_${queryData?.contaCorrente}_${new Date().toISOString().split('T')[0]}.json`
+      link.click()
+      
+      URL.revokeObjectURL(url)
+      
+    } catch (err) {
+      setError('Erro ao exportar dados')
+    }
   }
 
   // Nova consulta
   const handleNewQuery = () => {
-    setCurrentQuery(null)
-    setActiveTab('form')
+    setShowResults(false)
+    setQueryData(null)
+    clearData()
+    setError(null)
   }
 
-  // Formatar período para exibição
-  const formatPeriod = (dataInicio: string, dataFim: string) => {
-    const inicio = new Date(dataInicio).toLocaleDateString('pt-BR')
-    const fim = new Date(dataFim).toLocaleDateString('pt-BR')
-    return `${inicio} - ${fim}`
-  }
-
-  // Obter ícone baseado no tipo de consulta
-  const getQueryIcon = (tipo: string) => {
-    switch (tipo) {
-      case 'logs':
-        return History
-      case 'imports':
-        return Download
-      case 'movements':
-        return CreditCard
-      default:
-        return Search
+  // Atualizar consulta
+  const handleRefresh = () => {
+    if (queryData) {
+      handleSubmit(queryData)
     }
   }
 
-  // Obter label do tipo de consulta
-  const getQueryLabel = (tipo: string) => {
-    switch (tipo) {
-      case 'logs':
-        return 'Logs'
-      case 'imports':
-        return 'Importações'
-      case 'movements':
-        return 'Movimentações'
-      default:
-        return 'Todas'
+  // Obter estatísticas da consulta
+  const getQueryStats = () => {
+    if (!hasData) return null
+
+    const stats = {
+      logs: logs?.totalElements || 0,
+      imports: imports?.totalElements || 0,
+      movements: movements?.totalElements || 0,
+      total: (logs?.totalElements || 0) + (imports?.totalElements || 0) + (movements?.totalElements || 0)
     }
+
+    return stats
   }
+
+  const stats = getQueryStats()
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Consulta de Conta</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Consulta de Contas Bancárias</h1>
           <p className="text-muted-foreground">
-            Consulte logs, importações e movimentações de contas bancárias
+            Sistema integrado para consulta de logs, importações e movimentações
           </p>
         </div>
         
-        {currentQuery && (
-          <div className="flex items-center space-x-2">
-            <Badge variant="outline" className="text-sm">
-              Ag. {currentQuery.agencia} / Conta {currentQuery.contaCorrente}
-            </Badge>
-            <Badge variant="secondary" className="text-sm">
-              {formatPeriod(currentQuery.dataInicio, currentQuery.dataFim)}
-            </Badge>
+        {showResults && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleNewQuery}>
+              <Search className="h-4 w-4 mr-2" />
+              Nova Consulta
+            </Button>
+            <Button variant="outline" onClick={handleRefresh} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
           </div>
         )}
       </div>
 
-      {/* Tabs principais */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="form" className="flex items-center space-x-2">
-            <Search className="h-4 w-4" />
-            <span>Nova Consulta</span>
-          </TabsTrigger>
-          
-          <TabsTrigger value="results" className="flex items-center space-x-2" disabled={!currentQuery}>
-            <History className="h-4 w-4" />
-            <span>Resultados</span>
-            {currentQuery && (
-              <Badge variant="secondary" className="ml-1">
-                {queryHistory.length > 0 ? '1' : '0'}
-              </Badge>
-            )}
-          </TabsTrigger>
-          
-          <TabsTrigger value="history" className="flex items-center space-x-2">
-            <History className="h-4 w-4" />
-            <span>Histórico</span>
-            {queryHistory.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {queryHistory.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      {/* Formulário de Consulta */}
+      {!showResults && (
+        <AdvancedAccountQueryForm
+          onSubmit={handleSubmit}
+          onExport={handleExport}
+          loading={loading}
+          initialData={queryData || undefined}
+        />
+      )}
 
-        {/* Tab: Nova Consulta */}
-        <TabsContent value="form" className="space-y-6">
-          <AdvancedAccountQueryForm
-            onSubmit={handleSubmitQuery}
-            loading={false}
-          />
-        </TabsContent>
+      {/* Resultados da Consulta */}
+      {showResults && queryData && (
+        <div className="space-y-6">
+          {/* Resumo da Consulta */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Resumo da Consulta
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <Building2 className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-blue-600">{queryData.agencia}</div>
+                  <div className="text-sm text-blue-600">Agência</div>
+                </div>
+                
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <CreditCard className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-green-600">{queryData.contaCorrente}</div>
+                  <div className="text-sm text-green-600">Conta</div>
+                </div>
+                
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <Clock className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                  <div className="text-sm text-purple-600">
+                    {queryData.dataInicio.toLocaleDateString('pt-BR')} - {queryData.dataFim.toLocaleDateString('pt-BR')}
+                  </div>
+                  <div className="text-sm text-purple-600">Período</div>
+                </div>
+                
+                <div className="text-center p-4 bg-orange-50 rounded-lg">
+                  <FileText className="h-8 w-8 text-orange-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-orange-600">{stats?.total || 0}</div>
+                  <div className="text-sm text-orange-600">Total de Registros</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Tab: Resultados */}
-        <TabsContent value="results" className="space-y-6">
-          {currentQuery ? (
-            <QueryResults
-              queryData={currentQuery}
-              onNewQuery={handleNewQuery}
-            />
-          ) : (
+          {/* Estatísticas Detalhadas */}
+          {stats && (
             <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-12">
-                  <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Nenhuma consulta realizada</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Execute uma consulta para ver os resultados
-                  </p>
-                  <button
-                    onClick={() => setActiveTab('form')}
-                    className="text-primary hover:underline"
-                  >
-                    Ir para Nova Consulta
-                  </button>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="h-5 w-5" />
+                  Estatísticas da Consulta
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                    <CheckCircle className="h-6 w-6 text-blue-600" />
+                    <div>
+                      <div className="text-2xl font-bold text-blue-600">{stats.logs}</div>
+                      <div className="text-sm text-blue-600">Logs de Consulta</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                    <Download className="h-6 w-6 text-green-600" />
+                    <div>
+                      <div className="text-2xl font-bold text-green-600">{stats.imports}</div>
+                      <div className="text-sm text-green-600">Importações</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
+                    <FileText className="h-6 w-6 text-purple-600" />
+                    <div>
+                      <div className="text-2xl font-bold text-purple-600">{stats.movements}</div>
+                      <div className="text-sm text-purple-600">Movimentações</div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           )}
-        </TabsContent>
 
-        {/* Tab: Histórico */}
-        <TabsContent value="history" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <History className="h-5 w-5" />
-                <span>Histórico de Consultas</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {queryHistory.length === 0 ? (
-                <div className="text-center py-12">
-                  <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Nenhuma consulta no histórico</h3>
-                  <p className="text-muted-foreground">
-                    As consultas realizadas aparecerão aqui
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {queryHistory.map((query, index) => {
-                    const QueryIcon = getQueryIcon(query.tipoConsulta)
-                    
-                    return (
-                      <div
-                        key={index}
-                        className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => executeHistoryQuery(query)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-primary/10 rounded-full">
-                              <Building2 className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                Ag. {query.agencia} / Conta {query.contaCorrente}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {formatPeriod(query.dataInicio, query.dataFim)}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-3">
-                            <Badge variant="outline" className="flex items-center space-x-1">
-                              <QueryIcon className="h-3 w-3" />
-                              <span>{getQueryLabel(query.tipoConsulta)}</span>
-                            </Badge>
-                            
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                executeHistoryQuery(query)
-                                setActiveTab('results')
-                              }}
-                              className="text-primary hover:underline text-sm"
-                            >
-                              Executar
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          {/* Resultados */}
+          <QueryResults
+            agencia={queryData.agencia}
+            contaCorrente={queryData.contaCorrente}
+            dataInicio={queryData.dataInicio}
+            dataFim={queryData.dataFim}
+            tipoConsulta={queryData.tipoConsulta}
+            onRefresh={handleRefresh}
+            onExport={handleExport}
+          />
+        </div>
+      )}
 
-      {/* Resumo da consulta atual */}
-      {currentQuery && (
-        <Card className="bg-muted/50">
+      {/* Mensagens de Erro */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-              <div className="flex items-center space-x-2">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  <span className="font-medium">Agência:</span> {currentQuery.agencia}
-                </span>
+            <div className="flex items-center gap-3 text-red-800">
+              <AlertCircle className="h-5 w-5" />
+              <div>
+                <h4 className="font-medium">Erro na Consulta</h4>
+                <p className="text-sm">{error}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setError(null)}
+                className="ml-auto"
+              >
+                ✕
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Estado de Carregamento */}
+      {loading && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center p-8">
+              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mr-3" />
+              <span className="text-muted-foreground">Executando consulta...</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Instruções de Uso */}
+      {!showResults && (
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Como Usar
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="space-y-2">
+                <h4 className="font-medium">1. Preencha os Dados</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• Agência: 4 dígitos (ex: 1234)</li>
+                  <li>• Conta: formato XX.XXX-X</li>
+                  <li>• Período: máximo 1 ano</li>
+                </ul>
               </div>
               
-              <div className="flex items-center space-x-2">
-                <CreditCard className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  <span className="font-medium">Conta:</span> {currentQuery.contaCorrente}
-                </span>
+              <div className="space-y-2">
+                <h4 className="font-medium">2. Escolha o Tipo</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• Logs: histórico de consultas</li>
+                  <li>• Importações: extratos importados</li>
+                  <li>• Movimentações: transações bancárias</li>
+                  <li>• Todos: dados completos</li>
+                </ul>
               </div>
               
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  <span className="font-medium">Período:</span> {formatPeriod(currentQuery.dataInicio, currentQuery.dataFim)}
-                </span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  <span className="font-medium">Tipo:</span> {getQueryLabel(currentQuery.tipoConsulta)}
-                </span>
+              <div className="space-y-2">
+                <h4 className="font-medium">3. Execute e Analise</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• Clique em "Consultar"</li>
+                  <li>• Visualize os resultados</li>
+                  <li>• Use filtros e busca</li>
+                  <li>• Exporte os dados</li>
+                </ul>
               </div>
             </div>
           </CardContent>
@@ -303,5 +370,3 @@ export const IntegratedAccountQuery: React.FC = () => {
     </div>
   )
 }
-
-export default IntegratedAccountQuery

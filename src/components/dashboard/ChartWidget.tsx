@@ -2,7 +2,7 @@ import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Download, MoreHorizontal } from 'lucide-react'
-import { ChartData } from '@/services/dashboardService'
+import type { ChartData } from '@/services/dashboardService'
 
 /**
  * Componente para exibir gráficos do dashboard

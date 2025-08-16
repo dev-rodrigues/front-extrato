@@ -48,7 +48,7 @@ class RetryManager {
     const isNetworkError = !error.response
     const isServerError = error.response?.status && error.response.status >= 500
     
-    return (isNetworkError || isServerError) && this.retryCount < this.retryAttempts
+    return Boolean((isNetworkError || isServerError) && this.retryCount < this.retryAttempts)
   }
 
   async retry<T>(requestFn: () => Promise<T>): Promise<T> {
@@ -77,7 +77,7 @@ const api: AxiosInstance = axios.create({
 
 // Interceptor para requisições
 api.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config: any) => {
     // Adicionar timestamp para cache busting
     if (config.params) {
       config.params._t = Date.now()
@@ -85,7 +85,7 @@ api.interceptors.request.use(
     
     // Log de requisição em desenvolvimento
     if (isDevelopment) {
-      console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`)
+      console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url || 'undefined'}`)
     }
     
     return config
@@ -101,26 +101,30 @@ api.interceptors.response.use(
   (response: AxiosResponse) => {
     // Log de resposta em desenvolvimento
     if (isDevelopment) {
-      console.log(`✅ API Response: ${response.status} ${response.config.url}`)
+      console.log(`✅ API Response: ${response.status} ${response.config.url || 'undefined'}`)
     }
     
     return response
   },
   async (error: AxiosError) => {
-    const retryManager = new RetryManager(config)
+    // Verificar se já tentamos retry para esta requisição
+    const retryCount = (error.config as any)?._retryCount || 0
+    const maxRetries = config.retryAttempts
     
-    // Tentar retry se aplicável
-    if (retryManager.shouldRetry(error)) {
-      console.warn(`⚠️ Tentativa de retry ${retryManager.retryCount + 1}/${config.retryAttempts}`)
+    if (retryCount < maxRetries) {
+      // Marcar que estamos tentando retry
+      ;(error.config as any)._retryCount = retryCount + 1
+      
+      console.warn(`⚠️ Tentativa de retry ${retryCount + 1}/${maxRetries}`)
       
       try {
-        const retryResponse = await retryManager.retry(() => 
-          api.request(error.config!)
-        )
-        retryManager.reset()
+        // Aguardar antes de tentar novamente
+        await new Promise(resolve => setTimeout(resolve, config.retryDelay * (retryCount + 1)))
+        
+        // Tentar a requisição novamente
+        const retryResponse = await api.request(error.config!)
         return retryResponse
       } catch (retryError) {
-        retryManager.reset()
         console.error('❌ Retry falhou:', retryError)
       }
     }

@@ -1,0 +1,350 @@
+{
+  "info": {
+    "name": "Account Query Endpoints",
+    "description": "Endpoints para consulta de contas, logs, importações e movimentações bancárias",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Query Logs - Agency 2234-9 Account 57446-5",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/accounts/{{testAgency}}/{{testAccount}}/query-logs?mes={{testMes}}&ano={{testAno}}&page=0&size={{pageSize}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "accounts", "{{testAgency}}", "{{testAccount}}", "query-logs"],
+          "query": [
+            {
+              "key": "mes",
+              "value": "{{testMes}}"
+            },
+            {
+              "key": "ano",
+              "value": "{{testAno}}"
+            },
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "{{pageSize}}"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Teste de status HTTP",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Teste de estrutura da resposta",
+              "pm.test(\"Response has required fields\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('content');",
+              "    pm.expect(response).to.have.property('totalElements');",
+              "    pm.expect(response).to.have.property('totalPages');",
+              "    pm.expect(response).to.have.property('size');",
+              "    pm.expect(response).to.have.property('number');",
+              "});",
+              "",
+              "// Teste específico para agência 2234-9",
+              "pm.test(\"All logs are for agency 2234-9\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.content && response.content.length > 0) {",
+              "        response.content.forEach(log => {",
+              "            pm.expect(log.agencia).to.eql('2234-9');",
+              "        });",
+              "    }",
+              "});",
+              "",
+              "// Teste específico para conta 57446-5",
+              "pm.test(\"All logs are for account 57446-5\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.content && response.content.length > 0) {",
+              "        response.content.forEach(log => {",
+              "            pm.expect(log.contaCorrente).to.eql('57446-5');",
+              "        });",
+              "    }",
+              "});",
+              "",
+              "// Teste de período abril-maio 2024",
+              "pm.test(\"All logs are within April-May 2024 period\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.content && response.content.length > 0) {",
+              "        const startDate = new Date('2024-04-01');",
+              "        const endDate = new Date('2024-05-31');",
+              "        response.content.forEach(log => {",
+              "            const logDate = new Date(log.dataHoraTentativa);",
+              "            pm.expect(logDate).to.be.at.least(startDate);",
+              "            pm.expect(logDate).to.be.at.most(endDate);",
+              "        });",
+              "    }",
+              "});",
+              "",
+              "// Teste de estrutura dos logs",
+              "pm.test(\"Log entries have required fields\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.content && response.content.length > 0) {",
+              "        const firstLog = response.content[0];",
+              "        pm.expect(firstLog).to.have.property('id');",
+              "        pm.expect(firstLog).to.have.property('banco');",
+              "        pm.expect(firstLog).to.have.property('agencia');",
+              "        pm.expect(firstLog).to.have.property('contaCorrente');",
+              "        pm.expect(firstLog).to.have.property('consultaPeriodoDe');",
+              "        pm.expect(firstLog).to.have.property('consultaPeriodoAte');",
+              "        pm.expect(firstLog).to.have.property('erroCodigo');",
+              "        pm.expect(firstLog).to.have.property('dataHoraTentativa');",
+              "    }",
+              "});",
+              "",
+              "// Teste de performance",
+              "pm.test(\"Response time is acceptable\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(500);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Import Records - Agency 2234-9 Account 57446-5",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/accounts/{{testAgency}}/{{testAccount}}/imports?mes={{testMes}}&ano={{testAno}}&page=0&size={{pageSize}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "accounts", "{{testAgency}}", "{{testAccount}}", "imports"],
+          "query": [
+            {
+              "key": "mes",
+              "value": "{{testMes}}"
+            },
+            {
+              "key": "ano",
+              "value": "{{testAno}}"
+            },
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "{{pageSize}}"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Teste de status HTTP",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Teste de estrutura da resposta",
+              "pm.test(\"Response has required fields\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('content');",
+              "    pm.expect(response).to.have.property('totalElements');",
+              "    pm.expect(response).to.have.property('totalPages');",
+              "    pm.expect(response).to.have.property('size');",
+              "    pm.expect(response).to.have.property('number');",
+              "});",
+              "",
+              "// Teste específico para agência 2234-9",
+              "pm.test(\"All imports are for agency 2234-9\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.content && response.content.length > 0) {",
+              "        response.content.forEach(import => {",
+              "            pm.expect(import.queryAgency).to.eql('2234-9');",
+              "        });",
+              "    }",
+              "});",
+              "",
+              "// Teste específico para conta 57446-5",
+              "pm.test(\"All imports are for account 57446-5\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.content && response.content.length > 0) {",
+              "        response.content.forEach(import => {",
+              "            pm.expect(import.queryAccount).to.eql('57446-5');",
+              "        });",
+              "    }",
+              "});",
+              "",
+              "// Teste de período abril-maio 2024",
+              "pm.test(\"All imports are within April-May 2024 period\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.content && response.content.length > 0) {",
+              "        const startDate = new Date('2024-04-01');",
+              "        const endDate = new Date('2024-05-31');",
+              "        response.content.forEach(import => {",
+              "            const importDate = new Date(import.createdAt);",
+              "            pm.expect(importDate).to.be.at.least(startDate);",
+              "            pm.expect(importDate).to.be.at.most(endDate);",
+              "        });",
+              "    }",
+              "});",
+              "",
+              "// Teste de performance",
+              "pm.test(\"Response time is acceptable\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(500);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bank Movements - Agency 2234-9 Account 57446-5",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/accounts/{{testAgency}}/{{testAccount}}/movements?mes={{testMes}}&ano={{testAno}}&page=0&size={{pageSize}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "accounts", "{{testAgency}}", "{{testAccount}}", "movements"],
+          "query": [
+            {
+              "key": "mes",
+              "value": "{{testMes}}"
+            },
+            {
+              "key": "ano",
+              "value": "{{testAno}}"
+            },
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "{{pageSize}}"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Teste de status HTTP",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Teste de estrutura da resposta",
+              "pm.test(\"Response has required fields\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('content');",
+              "    pm.expect(response).to.have.property('totalElements');",
+              "    pm.expect(response).to.have.property('totalPages');",
+              "    pm.expect(response).to.have.property('size');",
+              "    pm.expect(response).to.have.property('number');",
+              "});",
+              "",
+              "// Teste específico para agência 2234-9",
+              "pm.test(\"All movements are for agency 2234-9\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.content && response.content.length > 0) {",
+              "        response.content.forEach(movement => {",
+              "            pm.expect(movement.branch).to.eql('2234-9');",
+              "        });",
+              "    }",
+              "});",
+              "",
+              "// Teste específico para conta 57446-5",
+              "pm.test(\"All movements are for account 57446-5\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.content && response.content.length > 0) {",
+              "        response.content.forEach(movement => {",
+              "            pm.expect(movement.account).to.eql('57446-5');",
+              "    }",
+              "});",
+              "",
+              "// Teste de período abril-maio 2024",
+              "pm.test(\"All movements are within April-May 2024 period\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.content && response.content.length > 0) {",
+              "        const startDate = new Date('2024-04-01');",
+              "        const endDate = new Date('2024-05-31');",
+              "        response.content.forEach(movement => {",
+              "            const movementDate = new Date(movement.movementDate);",
+              "            pm.expect(movementDate).to.be.at.least(startDate);",
+              "            pm.expect(movementDate).to.be.at.most(endDate);",
+              "        });",
+              "    }",
+              "});",
+              "",
+              "// Teste de performance",
+              "pm.test(\"Response time is acceptable\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(500);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "testAgency",
+      "value": "2234-9",
+      "type": "string"
+    },
+    {
+      "key": "testAccount",
+      "value": "57446-5",
+      "type": "string"
+    },
+    {
+      "key": "testMes",
+      "value": "4",
+      "type": "string"
+    },
+    {
+      "key": "testAno",
+      "value": "2025",
+      "type": "string"
+    },
+    {
+      "key": "pageSize",
+      "value": "10",
+      "type": "string"
+    }
+  ]
+}

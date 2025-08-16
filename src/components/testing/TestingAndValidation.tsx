@@ -166,7 +166,7 @@ export const TestingAndValidation: React.FC = () => {
               <div className="flex justify-between items-center">
                 <span className="text-sm">Tempo de Resposta da API</span>
                 <Badge variant="default" className="bg-green-500">
-                  < 200ms
+                  &lt; 200ms
                 </Badge>
               </div>
               <div className="flex justify-between items-center">

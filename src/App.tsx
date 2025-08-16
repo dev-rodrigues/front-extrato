@@ -1,60 +1,25 @@
 import { Routes, Route } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
-import { MainDashboard } from '@/components/dashboard/MainDashboard'
+import { EnhancedDashboard } from '@/components/dashboard/EnhancedDashboard'
 import { IntegratedAccountQuery } from '@/components/features/IntegratedAccountQuery'
-import { QueryLogs } from '@/components/features/QueryLogs'
-import { Imports } from '@/components/features/Imports'
-import { Movements } from '@/components/features/Movements'
-import { QueryResults } from '@/components/features/QueryResults'
-
-// Dados mockados para demonstração (mantidos para fallback)
-const mockAlerts = [
-  {
-    id: '1',
-    type: 'critical' as const,
-    message: 'Falha na conexão com API do Banco do Brasil',
-    timestamp: '2 min atrás',
-    priority: 'high' as const
-  },
-  {
-    id: '2',
-    type: 'warning' as const,
-    message: '5 consultas com timeout nos últimos 30 min',
-    timestamp: '15 min atrás',
-    priority: 'medium' as const
-  },
-  {
-    id: '3',
-    type: 'info' as const,
-    message: 'Nova versão da API disponível',
-    timestamp: '1 hora atrás',
-    priority: 'low' as const
-  }
-]
+import { ImportManager } from '@/components/features/ImportManager'
+import { MovementAnalyzer } from '@/components/features/MovementAnalyzer'
 
 function App() {
   return (
     <Layout>
       <Routes>
         {/* Dashboard Principal */}
-        <Route path="/" element={<MainDashboard />} />
+        <Route path="/" element={<EnhancedDashboard />} />
         
-        {/* Módulo de Consultas */}
+        {/* Módulo de Consultas - Componente Integrado */}
         <Route path="/consulta" element={<IntegratedAccountQuery />} />
-        <Route path="/consulta/logs" element={<QueryLogs />} />
-        <Route path="/consulta/resultados" element={<QueryResults queryData={{
-          agencia: '',
-          contaCorrente: '',
-          dataInicio: '',
-          dataFim: '',
-          tipoConsulta: 'logs'
-        }} />} />
         
         {/* Módulo de Importações */}
-        <Route path="/importacoes" element={<Imports />} />
+        <Route path="/importacoes" element={<ImportManager />} />
         
         {/* Módulo de Movimentações */}
-        <Route path="/movimentacoes" element={<Movements /> } />
+        <Route path="/movimentacoes" element={<MovementAnalyzer />} />
         
         {/* Módulo de Relatórios */}
         <Route path="/relatorios" element={

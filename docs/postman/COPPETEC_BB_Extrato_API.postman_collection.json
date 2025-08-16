@@ -1,0 +1,368 @@
+{
+  "info": {
+    "name": "COPPETEC BB Extrato API",
+    "description": "Coleção completa para validação e teste da API de monitoramento de schedule e consultas de extratos bancários",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:10000",
+      "type": "string"
+    },
+    {
+      "key": "testAgency",
+      "value": "2234-9",
+      "type": "string"
+    },
+    {
+      "key": "testAccount",
+      "value": "57446-5",
+      "type": "string"
+    },
+    {
+      "key": "testMes",
+      "value": "4",
+      "type": "string"
+    },
+    {
+      "key": "testAno",
+      "value": "2025",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Schedule Monitoring",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/schedule/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schedule", "health"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Teste de status HTTP",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Teste de tempo de resposta",
+                  "pm.test(\"Response time is less than 100ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(100);",
+                  "});",
+                  "",
+                  "// Teste de estrutura da resposta",
+                  "pm.test(\"Response has required fields\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    pm.expect(response).to.have.property('timestamp');",
+                  "    pm.expect(response).to.have.property('activeJobs');",
+                  "    pm.expect(response).to.have.property('totalJobs');",
+                  "});",
+                  "",
+                  "// Teste de valores válidos",
+                  "pm.test(\"Status is valid\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(['HEALTHY', 'IDLE']).to.include(response.status);",
+                  "});",
+                  "",
+                  "// Teste de formato de timestamp",
+                  "pm.test(\"Timestamp is valid ISO format\", function () {",
+                  "    const response = pm.response.json();",
+                  "    const timestamp = new Date(response.timestamp);",
+                  "    pm.expect(timestamp.toString()).to.not.equal('Invalid Date');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Progress Monitoring",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/schedule/progress",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schedule", "progress"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Teste de status HTTP",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Teste de estrutura da resposta",
+                  "pm.test(\"Response has required fields\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('activeJobs');",
+                  "    pm.expect(response).to.have.property('completedJobs');",
+                  "    pm.expect(response).to.have.property('failedJobs');",
+                  "    pm.expect(response).to.have.property('cancelledJobs');",
+                  "    pm.expect(response).to.have.property('averageExecutionTime');",
+                  "    pm.expect(response).to.have.property('successRate');",
+                  "    pm.expect(response).to.have.property('totalRecordsProcessed');",
+                  "    pm.expect(response).to.have.property('totalAccountsProcessed');",
+                  "    pm.expect(response).to.have.property('activeJobsList');",
+                  "});",
+                  "",
+                  "// Teste de tipos de dados",
+                  "pm.test(\"Data types are correct\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.activeJobs).to.be.a('number');",
+                  "    pm.expect(response.completedJobs).to.be.a('number');",
+                  "    pm.expect(response.failedJobs).to.be.a('number');",
+                  "    pm.expect(response.cancelledJobs).to.be.a('number');",
+                  "    pm.expect(response.averageExecutionTime).to.be.a('number');",
+                  "    pm.expect(response.successRate).to.be.a('number');",
+                  "    pm.expect(response.totalRecordsProcessed).to.be.a('number');",
+                  "    pm.expect(response.totalAccountsProcessed).to.be.a('number');",
+                  "    pm.expect(response.activeJobsList).to.be.an('array');",
+                  "});",
+                  "",
+                  "// Teste de valores lógicos",
+                  "pm.test(\"Values are logical\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.activeJobs).to.be.at.least(0);",
+                  "    pm.expect(response.completedJobs).to.be.at.least(0);",
+                  "    pm.expect(response.failedJobs).to.be.at.least(0);",
+                  "    pm.expect(response.cancelledJobs).to.be.at.least(0);",
+                  "    pm.expect(response.successRate).to.be.at.least(0);",
+                  "    pm.expect(response.successRate).to.be.at.most(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Active Jobs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/schedule/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schedule", "active"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Teste de status HTTP",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Teste de estrutura da resposta",
+                  "pm.test(\"Response is an array\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.be.an('array');",
+                  "});",
+                  "",
+                  "// Teste de estrutura dos jobs ativos",
+                  "if (pm.response.json().length > 0) {",
+                  "    pm.test(\"Active jobs have required fields\", function () {",
+                  "        const response = pm.response.json();",
+                  "        const firstJob = response[0];",
+                  "        pm.expect(firstJob).to.have.property('jobName');",
+                  "        pm.expect(firstJob).to.have.property('status');",
+                  "        pm.expect(firstJob).to.have.property('startTime');",
+                  "        pm.expect(firstJob).to.have.property('lastUpdated');",
+                  "    });",
+                  "}",
+                  "",
+                  "// Teste de performance",
+                  "pm.test(\"Response time is acceptable\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Job Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/schedule/job/test-job",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schedule", "job", "test-job"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Teste de status HTTP (pode ser 200 ou 404)",
+                  "pm.test(\"Status code is valid\", function () {",
+                  "    const status = pm.response.code;",
+                  "    pm.expect([200, 404]).to.include(status);",
+                  "});",
+                  "",
+                  "// Se encontrou o job, valida a estrutura",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Job details have required fields\", function () {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response).to.have.property('jobName');",
+                  "        pm.expect(response).to.have.property('status');",
+                  "        pm.expect(response).to.have.property('startTime');",
+                  "        pm.expect(response).to.have.property('lastUpdated');",
+                  "    });",
+                  "}",
+                  "",
+                  "// Teste de tempo de resposta",
+                  "pm.test(\"Response time is acceptable\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "System Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/schedule/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schedule", "stats"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Teste de status HTTP",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Teste de estrutura da resposta",
+                  "pm.test(\"Response has required fields\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('totalJobs');",
+                  "    pm.expect(response).to.have.property('runningJobs');",
+                  "    pm.expect(response).to.have.property('completedJobs');",
+                  "    pm.expect(response).to.have.property('failedJobs');",
+                  "});",
+                  "",
+                  "// Teste de tipos de dados",
+                  "pm.test(\"Data types are correct\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.totalJobs).to.be.a('number');",
+                  "    pm.expect(response.runningJobs).to.be.a('number');",
+                  "    pm.expect(response.completedJobs).to.be.a('number');",
+                  "    pm.expect(response.failedJobs).to.be.a('number');",
+                  "});",
+                  "",
+                  "// Teste de valores lógicos",
+                  "pm.test(\"Values are logical\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.totalJobs).to.be.at.least(0);",
+                  "    pm.expect(response.runningJobs).to.be.at.least(0);",
+                  "    pm.expect(response.completedJobs).to.be.at.least(0);",
+                  "    pm.expect(response.failedJobs).to.be.at.least(0);",
+                  "    pm.expect(response.totalJobs).to.be.at.least(response.runningJobs);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/schedule/job/test-job/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schedule", "job", "test-job", "cancel"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Teste de status HTTP (pode ser 200 ou 404)",
+                  "pm.test(\"Status code is valid\", function () {",
+                  "    const status = pm.response.code;",
+                  "    pm.expect([200, 404]).to.include(status);",
+                  "});",
+                  "",
+                  "// Teste de tempo de resposta",
+                  "pm.test(\"Response time is acceptable\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

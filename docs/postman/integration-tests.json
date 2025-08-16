@@ -1,0 +1,241 @@
+{
+  "info": {
+    "name": "Integration Tests",
+    "description": "Testes de integração para a API BB Extrato",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Complete Workflow Test",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/schedule/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "schedule", "health"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Setup para teste de workflow completo",
+              "console.log('Iniciando teste de workflow completo...');",
+              "pm.globals.set('workflowStartTime', Date.now());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Teste de workflow completo",
+              "pm.test(\"Complete workflow test\", function () {",
+              "    const workflowStartTime = pm.globals.get('workflowStartTime');",
+              "    const currentTime = Date.now();",
+              "    const totalTime = currentTime - workflowStartTime;",
+              "    ",
+              "    console.log(`Workflow executado em ${totalTime}ms`);",
+              "    pm.expect(totalTime).to.be.below(1000); // Máximo 1 segundo",
+              "});",
+              "",
+              "// Validação de health check",
+              "pm.test(\"Health check is working\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.status).to.be.oneOf(['HEALTHY', 'IDLE']);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Performance Test - Multiple Requests",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/schedule/stats",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "schedule", "stats"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Teste de performance com múltiplas requisições",
+              "pm.test(\"Response time is consistently fast\", function () {",
+              "    const responseTime = pm.response.responseTime;",
+              "    const lastResponseTime = pm.globals.get('lastResponseTime');",
+              "    ",
+              "    if (lastResponseTime) {",
+              "        const timeDiff = Math.abs(responseTime - lastResponseTime);",
+              "        pm.expect(timeDiff).to.be.below(100); // Variação máxima de 100ms",
+              "    }",
+              "    ",
+              "    pm.globals.set('lastResponseTime', responseTime);",
+              "    pm.expect(responseTime).to.be.below(200); // Máximo 200ms",
+              "});",
+              "",
+              "// Teste de throughput",
+              "pm.test(\"Throughput is acceptable\", function () {",
+              "    const responseTime = pm.response.responseTime;",
+              "    const requestsPerSecond = 1000 / responseTime;",
+              "    pm.expect(requestsPerSecond).to.be.above(5); // Mínimo 5 req/s",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Handling Test",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/schedule/job/non-existent-job",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "schedule", "job", "non-existent-job"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Teste de tratamento de erro",
+              "pm.test(\"Error handling works correctly\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "// Teste de tempo de resposta para erro",
+              "pm.test(\"Error response time is acceptable\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Data Validation Test - Agency 2234-9",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/accounts/{{testAgency}}/{{testAccount}}/query-logs?mes={{testMes}}&ano={{testAno}}&page=0&size=5",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "accounts", "{{testAgency}}", "{{testAccount}}", "query-logs"],
+          "query": [
+            {
+              "key": "mes",
+              "value": "{{testMes}}"
+            },
+            {
+              "key": "ano",
+              "value": "{{testAno}}"
+            },
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "5"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Teste de validação de dados específicos",
+              "pm.test(\"Data validation for agency 2234-9\", function () {",
+              "    const response = pm.response.json();",
+              "    ",
+              "    // Verifica se a resposta tem estrutura válida",
+              "    pm.expect(response).to.have.property('content');",
+              "    pm.expect(response).to.have.property('totalElements');",
+              "    ",
+              "    // Se há dados, valida a agência",
+              "    if (response.content && response.content.length > 0) {",
+              "        response.content.forEach(log => {",
+              "            pm.expect(log.agencia).to.eql('2234-9');",
+              "            pm.expect(log.contaCorrente).to.eql('57446-5');",
+              "        });",
+              "    }",
+              "});",
+              "",
+              "// Teste de paginação",
+              "pm.test(\"Pagination works correctly\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.size).to.eql(5);",
+              "    pm.expect(response.number).to.eql(0);",
+              "    pm.expect(response.content.length).to.be.at.most(5);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "testAgency",
+      "value": "2234-9",
+      "type": "string"
+    },
+    {
+      "key": "testAccount",
+      "value": "57446-5",
+      "type": "string"
+    },
+    {
+      "key": "testMes",
+      "value": "4",
+      "type": "string"
+    },
+    {
+      "key": "testAno",
+      "value": "2025",
+      "type": "string"
+    }
+  ]
+}

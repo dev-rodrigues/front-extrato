@@ -12,7 +12,7 @@ import {
   Wifi,
   Database
 } from 'lucide-react'
-import { SystemStatus } from '@/services/dashboardService'
+import type { SystemStatus } from '@/services/dashboardService'
 import { cn } from '@/lib/utils'
 
 /**

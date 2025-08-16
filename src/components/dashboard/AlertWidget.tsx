@@ -12,7 +12,7 @@ import {
   Check,
   Eye
 } from 'lucide-react'
-import { DashboardAlert } from '@/services/dashboardService'
+import type { DashboardAlert } from '@/services/dashboardService'
 import { cn } from '@/lib/utils'
 
 /**

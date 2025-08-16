@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ComponentType, SVGProps } from 'react'
+import type { ComponentType, SVGProps } from 'react'
 
 interface SummaryCardProps {
   title: string

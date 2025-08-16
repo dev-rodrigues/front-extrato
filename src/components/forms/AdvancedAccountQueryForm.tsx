@@ -1,472 +1,497 @@
-import React, { useState, useEffect } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { CalendarIcon, Search, Filter, Download, RefreshCw } from 'lucide-react'
+import { format, subDays, startOfDay, endOfDay } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Search, 
-  Star, 
-  History, 
-  Download, 
-  Share2, 
-  Calendar,
-  Building2,
-  CreditCard,
-  AlertCircle,
-  CheckCircle
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { 
-  getQueryLogs, 
-  getImports, 
-  getMovements,
-  validateAccount,
-  type AccountQueryParams 
-} from '@/services/accountService'
 
-/**
- * Schema de validação para consulta avançada
- */
-const advancedQuerySchema = z.object({
-  agencia: z.string()
-    .length(4, 'Agência deve ter exatamente 4 dígitos')
-    .regex(/^\d{4}$/, 'Agência deve conter apenas números')
-    .transform((val) => val.trim()),
-  contaCorrente: z.string()
-    .regex(/^\d{2}\.\d{3}-\d$/, 'Formato inválido. Use: XX.XXX-X')
-    .transform((val) => val.trim()),
-  dataInicio: z.string()
-    .min(1, 'Data de início é obrigatória')
-    .refine((date) => {
-      const selectedDate = new Date(date)
-      const today = new Date()
-      return selectedDate <= today
-    }, 'Data de início não pode ser futura'),
-  dataFim: z.string()
-    .min(1, 'Data de fim é obrigatória')
-    .refine((date) => {
-      const selectedDate = new Date(date)
-      const today = new Date()
-      return selectedDate <= today
-    }, 'Data de fim não pode ser futura'),
-  tipoConsulta: z.enum(['logs', 'imports', 'movements', 'all']).default('all'),
-  page: z.number().int().min(0).default(0),
-  size: z.number().int().min(1).max(100).default(20)
-}).refine((data) => {
-  const dataInicio = new Date(data.dataInicio)
-  const dataFim = new Date(data.dataFim)
-  return dataInicio <= dataFim
-}, {
-  message: 'Data de início deve ser anterior ou igual à data de fim',
-  path: ['dataFim']
-})
-
-type AdvancedQueryFormData = z.infer<typeof advancedQuerySchema>
+import { 
+  accountQuerySchema, 
+  type AccountQueryFormData,
+  type AdvancedFilters,
+  type ExportRequest
+} from '@/schemas/accountQuerySchema'
 
 interface AdvancedAccountQueryFormProps {
-  onSubmit: (data: AdvancedQueryFormData) => void
-  onCancel?: () => void
-  initialData?: Partial<AdvancedQueryFormData>
+  onSubmit: (data: AccountQueryFormData) => void
+  onExport?: (data: ExportRequest) => void
+  onAdvancedFiltersChange?: (filters: AdvancedFilters) => void
   loading?: boolean
+  initialData?: Partial<AccountQueryFormData>
 }
 
-export const AdvancedAccountQueryForm: React.FC<AdvancedAccountQueryFormProps> = ({
+/**
+ * Formulário avançado para consulta de contas bancárias
+ * Inclui validações, filtros avançados e opções de exportação
+ */
+export const AdvancedAccountQueryForm = ({
   onSubmit,
-  onCancel,
-  initialData,
-  loading = false
-}) => {
-  const [isValidating, setIsValidating] = useState(false)
-  const [validationResult, setValidationResult] = useState<{
-    isValid: boolean
-    message: string
-    type: 'success' | 'error' | 'warning'
-  } | null>(null)
-  const [recentQueries, setRecentQueries] = useState<Array<{
-    agencia: string
-    contaCorrente: string
-    dataInicio: string
-    dataFim: string
-    timestamp: Date
-  }>>([])
-  const [favoriteQueries, setFavoriteQueries] = useState<Array<{
-    id: string
-    agencia: string
-    contaCorrente: string
-    dataInicio: string
-    dataFim: string
-    name: string
-  }>>([])
+  onExport,
+  onAdvancedFiltersChange,
+  loading = false,
+  initialData
+}: AdvancedAccountQueryFormProps) => {
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'PDF' | 'EXCEL' | 'CSV'>('PDF')
+  const [includeHeaders, setIncludeHeaders] = useState(true)
 
-  const form = useForm<AdvancedQueryFormData>({
-    resolver: zodResolver(advancedQuerySchema),
+  const form = useForm<any>({
+    resolver: zodResolver(accountQuerySchema),
     defaultValues: {
       agencia: initialData?.agencia || '',
       contaCorrente: initialData?.contaCorrente || '',
-      dataInicio: initialData?.dataInicio || '',
-      dataFim: initialData?.dataFim || '',
-      tipoConsulta: initialData?.tipoConsulta || 'all',
+      dataInicio: initialData?.dataInicio || subDays(new Date(), 30),
+      dataFim: initialData?.dataFim || new Date(),
       page: initialData?.page || 0,
-      size: initialData?.size || 20
+      size: initialData?.size || 20,
+      tipoConsulta: initialData?.tipoConsulta || 'all'
     }
   })
 
-  // Carregar consultas recentes e favoritos do localStorage
-  useEffect(() => {
-    const savedRecent = localStorage.getItem('recentQueries')
-    const savedFavorites = localStorage.getItem('favoriteQueries')
-    
-    if (savedRecent) {
-      setRecentQueries(JSON.parse(savedRecent))
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
+    tiposMovimento: [],
+    valorMin: undefined,
+    valorMax: undefined,
+    status: [],
+    erroCodigo: []
+  })
+
+  // Funções para definir períodos predefinidos
+  const setPeriod = (period: 'today' | 'week' | 'month' | 'quarter' | 'year') => {
+    const now = new Date()
+    let startDate: Date
+    let endDate: Date
+
+    switch (period) {
+      case 'today':
+        startDate = startOfDay(now)
+        endDate = endOfDay(now)
+        break
+      case 'week':
+        startDate = subDays(now, 7)
+        endDate = now
+        break
+      case 'month':
+        startDate = subDays(now, 30)
+        endDate = now
+        break
+      case 'quarter':
+        startDate = subDays(now, 90)
+        endDate = now
+        break
+      case 'year':
+        startDate = subDays(now, 365)
+        endDate = now
+        break
+      default:
+        startDate = subDays(now, 30)
+        endDate = now
     }
-    
-    if (savedFavorites) {
-      setFavoriteQueries(JSON.parse(savedFavorites))
+
+    form.setValue('dataInicio', startDate)
+    form.setValue('dataFim', endDate)
+  }
+
+  // Atualiza filtros avançados
+  const updateAdvancedFilters = (newFilters: Partial<AdvancedFilters>) => {
+    const updatedFilters = { ...advancedFilters, ...newFilters }
+    setAdvancedFilters(updatedFilters)
+    onAdvancedFiltersChange?.(updatedFilters)
+  }
+
+  // Validação em tempo real
+  const validateField = (field: string) => {
+    form.trigger(field)
+  }
+
+  // Formatação automática da conta corrente
+  const formatAccountNumber = (value: string) => {
+    const numbers = value.replace(/\D/g, '')
+    if (numbers.length <= 2) return numbers
+    if (numbers.length <= 5) return `${numbers.slice(0, 2)}.${numbers.slice(2)}`
+    return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}-${numbers.slice(5, 6)}`
+  }
+
+  // Manipula mudança na conta corrente
+  const handleAccountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    const formatted = formatAccountNumber(value)
+    form.setValue('contaCorrente', formatted)
+    validateField('contaCorrente')
+  }
+
+  // Manipula envio do formulário
+  const handleSubmit = (data: any) => {
+    onSubmit(data as AccountQueryFormData)
+  }
+
+  // Manipula exportação
+  const handleExport = () => {
+    if (!onExport) return
+
+    const exportData: ExportRequest = {
+      tipo: 'CONSULTAS',
+      formato: exportFormat,
+      filtros: advancedFilters,
+      incluirHeaders: includeHeaders
     }
-  }, [])
 
-  // Validar conta em tempo real
-  const validateAccountRealTime = async (agencia: string, contaCorrente: string) => {
-    if (agencia.length === 4 && contaCorrente.match(/^\d{2}\.\d{3}-\d$/)) {
-      setIsValidating(true)
-      try {
-        const isValid = await validateAccount(agencia, contaCorrente)
-        setValidationResult({
-          isValid,
-          message: isValid ? 'Conta válida' : 'Conta não encontrada',
-          type: isValid ? 'success' : 'warning'
-        })
-      } catch (error) {
-        setValidationResult({
-          isValid: false,
-          message: 'Erro ao validar conta',
-          type: 'error'
-        })
-      } finally {
-        setIsValidating(false)
-      }
-    } else {
-      setValidationResult(null)
-    }
+    onExport(exportData)
   }
 
-  // Adicionar aos favoritos
-  const addToFavorites = () => {
-    const formData = form.getValues()
-    const newFavorite = {
-      id: Date.now().toString(),
-      agencia: formData.agencia,
-      contaCorrente: formData.contaCorrente,
-      dataInicio: formData.dataInicio,
-      dataFim: formData.dataFim,
-      name: `Ag. ${formData.agencia} / Conta ${formData.contaCorrente}`
-    }
-    
-    const updatedFavorites = [...favoriteQueries, newFavorite]
-    setFavoriteQueries(updatedFavorites)
-    localStorage.setItem('favoriteQueries', JSON.stringify(updatedFavorites))
-  }
-
-  // Executar consulta favorita
-  const executeFavorite = (favorite: typeof favoriteQueries[0]) => {
-    form.setValue('agencia', favorite.agencia)
-    form.setValue('contaCorrente', favorite.contaCorrente)
-    form.setValue('dataInicio', favorite.dataInicio)
-    form.setValue('dataFim', favorite.dataFim)
-  }
-
-  // Executar consulta recente
-  const executeRecent = (recent: typeof recentQueries[0]) => {
-    form.setValue('agencia', recent.agencia)
-    form.setValue('contaCorrente', recent.contaCorrente)
-    form.setValue('dataInicio', recent.dataInicio)
-    form.setValue('dataFim', recent.dataFim)
-  }
-
-  // Salvar consulta recente
-  const saveRecentQuery = (data: AdvancedQueryFormData) => {
-    const newRecent = {
-      agencia: data.agencia,
-      contaCorrente: data.contaCorrente,
-      dataInicio: data.dataInicio,
-      dataFim: data.dataFim,
-      timestamp: new Date()
-    }
-    
-    const updatedRecent = [newRecent, ...recentQueries.filter(q => 
-      !(q.agencia === data.agencia && q.contaCorrente === data.contaCorrente)
-    )].slice(0, 10)
-    
-    setRecentQueries(updatedRecent)
-    localStorage.setItem('recentQueries', JSON.stringify(updatedRecent))
-  }
-
-  const handleSubmit = async (data: AdvancedQueryFormData) => {
-    saveRecentQuery(data)
-    onSubmit(data)
-  }
+  // Verifica se o formulário é válido
+  const isFormValid = form.formState.isValid
+  const hasErrors = Object.keys(form.formState.errors).length > 0
 
   return (
-    <div className="space-y-6">
-      {/* Formulário Principal */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Search className="h-5 w-5" />
-            <span>Consulta Avançada de Conta</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            {/* Agência e Conta */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="agencia">Agência</Label>
-                <div className="relative">
-                  <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="agencia"
-                    placeholder="1234"
-                    maxLength={4}
-                    className="pl-10"
-                    {...form.register('agencia', {
-                      onChange: (e) => {
-                        const agencia = e.target.value
-                        const contaCorrente = form.getValues('contaCorrente')
-                        if (agencia.length === 4 && contaCorrente) {
-                          validateAccountRealTime(agencia, contaCorrente)
-                        }
-                      }
-                    })}
-                  />
-                </div>
-                {form.formState.errors.agencia && (
-                  <p className="text-sm text-red-500 flex items-center space-x-1">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{form.formState.errors.agencia.message}</span>
-                  </p>
-                )}
-              </div>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Search className="h-5 w-5" />
+          Consulta Avançada de Contas
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {/* Campos principais */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Agência */}
+            <div className="space-y-2">
+              <Label htmlFor="agencia">Agência *</Label>
+              <Input
+                id="agencia"
+                {...form.register('agencia')}
+                placeholder="1234"
+                maxLength={4}
+                onBlur={() => validateField('agencia')}
+                className={form.formState.errors.agencia ? 'border-red-500' : ''}
+              />
+              {form.formState.errors.agencia && (
+                <p className="text-sm text-red-500">
+                  {String(form.formState.errors.agencia.message)}
+                </p>
+              )}
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="contaCorrente">Conta Corrente</Label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="contaCorrente"
-                    placeholder="12.345-6"
-                    className="pl-10"
-                    {...form.register('contaCorrente', {
-                      onChange: (e) => {
-                        const contaCorrente = e.target.value
-                        const agencia = form.getValues('agencia')
-                        if (contaCorrente.match(/^\d{2}\.\d{3}-\d$/) && agencia.length === 4) {
-                          validateAccountRealTime(agencia, contaCorrente)
-                        }
-                      }
-                    })}
-                  />
-                </div>
-                {form.formState.errors.contaCorrente && (
-                  <p className="text-sm text-red-500 flex items-center space-x-1">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{form.formState.errors.contaCorrente.message}</span>
-                  </p>
-                )}
+            {/* Conta Corrente */}
+            <div className="space-y-2">
+              <Label htmlFor="contaCorrente">Conta Corrente *</Label>
+              <Input
+                id="contaCorrente"
+                value={form.watch('contaCorrente')}
+                onChange={handleAccountChange}
+                placeholder="12.345-6"
+                maxLength={8}
+                className={form.formState.errors.contaCorrente ? 'border-red-500' : ''}
+              />
+              {form.formState.errors.contaCorrente && (
+                <p className="text-sm text-red-500">
+                  {String(form.formState.errors.contaCorrente.message)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Período de consulta */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Período de Consulta *</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPeriod('today')}
+                >
+                  Hoje
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPeriod('week')}
+                >
+                  Semana
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPeriod('month')}
+                >
+                  Mês
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPeriod('quarter')}
+                >
+                  Trimestre
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPeriod('year')}
+                >
+                  Ano
+                </Button>
               </div>
             </div>
 
-            {/* Validação em Tempo Real */}
-            {validationResult && (
-              <div className={cn(
-                'p-3 rounded-lg border flex items-center space-x-2',
-                validationResult.type === 'success' && 'bg-green-50 border-green-200 text-green-700',
-                validationResult.type === 'warning' && 'bg-yellow-50 border-yellow-200 text-yellow-700',
-                validationResult.type === 'error' && 'bg-red-50 border-red-200 text-red-700'
-              )}>
-                {isValidating ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                ) : (
-                  validationResult.type === 'success' ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4" />
-                  )
-                )}
-                <span className="text-sm font-medium">{validationResult.message}</span>
-              </div>
-            )}
-
-            {/* Período de Consulta */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Data Início */}
               <div className="space-y-2">
-                <Label htmlFor="dataInicio">Data de Início</Label>
+                <Label htmlFor="dataInicio">Data Início *</Label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="dataInicio"
                     type="date"
-                    className="pl-10"
-                    {...form.register('dataInicio')}
+                    {...form.register('dataInicio', { valueAsDate: true })}
+                    onBlur={() => validateField('dataInicio')}
+                    className={form.formState.errors.dataInicio ? 'border-red-500' : ''}
                   />
+                  <CalendarIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 </div>
                 {form.formState.errors.dataInicio && (
-                  <p className="text-sm text-red-500">{form.formState.errors.dataInicio.message}</p>
+                  <p className="text-sm text-red-500">
+                    {String(form.formState.errors.dataInicio.message)}
+                  </p>
                 )}
               </div>
 
+              {/* Data Fim */}
               <div className="space-y-2">
-                <Label htmlFor="dataFim">Data de Fim</Label>
+                <Label htmlFor="dataFim">Data Fim *</Label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="dataFim"
                     type="date"
-                    className="pl-10"
-                    {...form.register('dataFim')}
+                    {...form.register('dataFim', { valueAsDate: true })}
+                    onBlur={() => validateField('dataFim')}
+                    className={form.formState.errors.dataFim ? 'border-red-500' : ''}
                   />
+                  <CalendarIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 </div>
                 {form.formState.errors.dataFim && (
-                  <p className="text-sm text-red-500">{form.formState.errors.dataFim.message}</p>
+                  <p className="text-sm text-red-500">
+                    {String(form.formState.errors.dataFim.message)}
+                  </p>
                 )}
               </div>
             </div>
+          </div>
 
+          {/* Configurações adicionais */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Tipo de Consulta */}
             <div className="space-y-2">
               <Label htmlFor="tipoConsulta">Tipo de Consulta</Label>
-              <Controller
-                name="tipoConsulta"
-                control={form.control}
-                render={({ field }) => (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {[
-                      { value: 'all', label: 'Todas', icon: Search },
-                      { value: 'logs', label: 'Logs', icon: History },
-                      { value: 'imports', label: 'Importações', icon: Download },
-                      { value: 'movements', label: 'Movimentações', icon: CreditCard }
-                    ].map((option) => (
-                      <Button
-                        key={option.value}
-                        type="button"
-                        variant={field.value === option.value ? 'default' : 'outline'}
-                        className="flex items-center space-x-2"
-                        onClick={() => field.onChange(option.value)}
-                      >
-                        <option.icon className="h-4 w-4" />
-                        <span>{option.label}</span>
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              />
+              <Select
+                value={form.watch('tipoConsulta')}
+                onValueChange={(value) => form.setValue('tipoConsulta', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Dados</SelectItem>
+                  <SelectItem value="logs">Apenas Logs</SelectItem>
+                  <SelectItem value="imports">Apenas Importações</SelectItem>
+                  <SelectItem value="movements">Apenas Movimentações</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Ações */}
-            <div className="flex flex-wrap items-center gap-3">
-              <Button 
-                type="submit" 
-                disabled={loading || isValidating}
-                className="flex items-center space-x-2"
+            {/* Tamanho da Página */}
+            <div className="space-y-2">
+              <Label htmlFor="size">Resultados por Página</Label>
+              <Select
+                value={form.watch('size').toString()}
+                onValueChange={(value) => form.setValue('size', parseInt(value))}
               >
-                <Search className="h-4 w-4" />
-                <span>{loading ? 'Consultando...' : 'Realizar Consulta'}</span>
-              </Button>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
+            {/* Período Selecionado */}
+            <div className="space-y-2">
+              <Label>Período Selecionado</Label>
+              <div className="text-sm text-muted-foreground">
+                {form.watch('dataInicio') && form.watch('dataFim') && (
+                  <>
+                    {format(form.watch('dataInicio')!, 'dd/MM/yyyy', { locale: ptBR })} - {' '}
+                    {format(form.watch('dataFim')!, 'dd/MM/yyyy', { locale: ptBR })}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Filtros Avançados */}
+          <div className="space-y-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              {showAdvancedFilters ? 'Ocultar' : 'Mostrar'} Filtros Avançados
+            </Button>
+
+            {showAdvancedFilters && (
+              <Card className="border-dashed">
+                <CardContent className="pt-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Valor Mínimo */}
+                    <div className="space-y-2">
+                      <Label htmlFor="valorMin">Valor Mínimo</Label>
+                      <Input
+                        id="valorMin"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={advancedFilters.valorMin || ''}
+                        onChange={(e) => updateAdvancedFilters({
+                          valorMin: e.target.value ? parseFloat(e.target.value) : undefined
+                        })}
+                      />
+                    </div>
+
+                    {/* Valor Máximo */}
+                    <div className="space-y-2">
+                      <Label htmlFor="valorMax">Valor Máximo</Label>
+                      <Input
+                        id="valorMax"
+                        type="number"
+                        step="0.01"
+                        placeholder="999999.99"
+                        value={advancedFilters.valorMax || ''}
+                        onChange={(e) => updateAdvancedFilters({
+                          valorMax: e.target.value ? parseFloat(e.target.value) : undefined
+                        })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {['SUCCESS', 'ERROR', 'PENDING', 'PROCESSING'].map((status) => (
+                        <Badge
+                          key={status}
+                          variant={advancedFilters.status?.includes(status) ? 'default' : 'outline'}
+                          className="cursor-pointer"
+                          onClick={() => {
+                            const current = advancedFilters.status || []
+                            const updated = current.includes(status)
+                              ? current.filter(s => s !== status)
+                              : [...current, status]
+                            updateAdvancedFilters({ status: updated })
+                          }}
+                        >
+                          {status}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Botões de ação */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button
+              type="submit"
+              disabled={loading || !isFormValid}
+              className="flex-1 flex items-center gap-2"
+            >
+              {loading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              {loading ? 'Consultando...' : 'Consultar'}
+            </Button>
+
+            {onExport && (
               <Button
                 type="button"
                 variant="outline"
-                onClick={addToFavorites}
-                className="flex items-center space-x-2"
+                onClick={handleExport}
+                disabled={!isFormValid}
+                className="flex items-center gap-2"
               >
-                <Star className="h-4 w-4" />
-                <span>Adicionar aos Favoritos</span>
+                <Download className="h-4 w-4" />
+                Exportar
               </Button>
+            )}
+          </div>
 
-              {onCancel && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={onCancel}
-                >
-                  Cancelar
-                </Button>
-              )}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          {/* Configurações de exportação */}
+          {onExport && (
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="exportFormat">Formato:</Label>
+                <Select value={exportFormat} onValueChange={(value) => setExportFormat(value as any)}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PDF">PDF</SelectItem>
+                    <SelectItem value="EXCEL">Excel</SelectItem>
+                    <SelectItem value="CSV">CSV</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-      {/* Consultas Favoritas */}
-      {favoriteQueries.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Star className="h-5 w-5 text-yellow-500" />
-              <span>Consultas Favoritas</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {favoriteQueries.map((favorite) => (
-                <div
-                  key={favorite.id}
-                  className="p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => executeFavorite(favorite)}
-                >
-                  <div className="font-medium text-sm">{favorite.name}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {favorite.dataInicio} - {favorite.dataFim}
-                  </div>
-                </div>
-              ))}
+              <div className="flex items-center gap-2">
+                <input
+                  id="includeHeaders"
+                  type="checkbox"
+                  checked={includeHeaders}
+                  onChange={(e) => setIncludeHeaders(e.target.checked)}
+                  className="rounded"
+                />
+                <Label htmlFor="includeHeaders">Incluir cabeçalhos</Label>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
 
-      {/* Consultas Recentes */}
-      {recentQueries.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <History className="h-5 w-5" />
-              <span>Consultas Recentes</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {recentQueries.slice(0, 5).map((recent, index) => (
-                <div
-                  key={index}
-                  className="p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => executeRecent(recent)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium">Ag. {recent.agencia}</span>
-                      <span className="mx-2">/</span>
-                      <span className="font-medium">Conta {recent.contaCorrente}</span>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {recent.timestamp.toLocaleDateString('pt-BR')}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {recent.dataInicio} - {recent.dataFim}
-                  </div>
-                </div>
-              ))}
+          {/* Resumo de validação */}
+          {hasErrors && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <h4 className="font-medium text-red-800 mb-2">Erros de Validação:</h4>
+              <ul className="text-sm text-red-700 space-y-1">
+                {Object.entries(form.formState.errors).map(([field, error]: [string, any]) => (
+                  <li key={field}>
+                    <strong>{field}:</strong> {error?.message}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          )}
+        </form>
+      </CardContent>
+    </Card>
   )
 }
-
-export default AdvancedAccountQueryForm
