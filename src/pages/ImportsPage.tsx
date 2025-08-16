@@ -1,40 +1,35 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { AppLoading } from '@/components/ui/AppLoading'
 import { 
   Download, 
   AlertCircle, 
   FileText, 
-  Database,
-  Loader2,
   ChevronLeft,
   ChevronRight,
-  Package,
-  Hash,
-  User
+  Calendar,
+  Database,
+  Eye
 } from 'lucide-react'
 import type { 
-  AccountImportResponse, 
-  AccountImportsResponse,
-  PeriodFilters 
+  AccountImportResponse
 } from '@/types/rfc'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
+import { AccountService } from '@/services/accountService'
 
 /**
  * ImportsPage - Implementa EXATAMENTE o que está documentado nos RFCs
  * Endpoint: GET /api/accounts/{agencia}/{contaCorrente}/imports
- * Funcionalidade: Lista paginada de importações com filtros por período
+ * Funcionalidade: Lista paginada de importações da conta específica
  */
 export function ImportsPage() {
   const { agencia, contaCorrente } = useParams<{ agencia: string; contaCorrente: string }>()
+  const navigate = useNavigate()
 
-  
   const [imports, setImports] = useState<AccountImportResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -44,33 +39,6 @@ export function ImportsPage() {
     totalPages: 0,
     totalElements: 0
   })
-  
-  const [filters, setFilters] = useState<PeriodFilters>({
-    periodoType: 'mesAno',
-    mes: undefined,
-    ano: undefined,
-    dataInicio: undefined,
-    dataFim: undefined
-  })
-
-  // Meses para seleção
-  const meses = [
-    { value: 1, label: 'Janeiro' },
-    { value: 2, label: 'Fevereiro' },
-    { value: 3, label: 'Março' },
-    { value: 4, label: 'Abril' },
-    { value: 5, label: 'Maio' },
-    { value: 6, label: 'Junho' },
-    { value: 7, label: 'Julho' },
-    { value: 8, label: 'Agosto' },
-    { value: 9, label: 'Setembro' },
-    { value: 10, label: 'Outubro' },
-    { value: 11, label: 'Novembro' },
-    { value: 12, label: 'Dezembro' }
-  ]
-
-  // Anos para seleção (2000 até ano atual + 1)
-  const anos = Array.from({ length: 26 }, (_, i) => new Date().getFullYear() - 25 + i + 1)
 
   // Carregar importações
   const fetchImports = async () => {
@@ -80,28 +48,18 @@ export function ImportsPage() {
     setError(null)
 
     try {
-      const params = new URLSearchParams()
+      console.log('🔄 Buscando importações para:', { agencia, contaCorrente, pagination })
       
-      // Adicionar filtros de período
-      if (filters.periodoType === 'mesAno') {
-        if (filters.mes) params.set('mes', filters.mes.toString())
-        if (filters.ano) params.set('ano', filters.ano.toString())
-      } else {
-        if (filters.dataInicio) params.set('dataInicio', filters.dataInicio)
-        if (filters.dataFim) params.set('dataFim', filters.dataFim)
-      }
-      
-      // Adicionar parâmetros de paginação
-      params.set('page', pagination.currentPage.toString())
-      params.set('size', pagination.pageSize.toString())
-
-      const response = await fetch(`/api/accounts/${agencia}/${contaCorrente}/imports?${params.toString()}`)
-      
-      if (!response.ok) {
-        throw new Error('Erro ao buscar importações')
+      const params = {
+        agencia,
+        contaCorrente,
+        page: pagination.currentPage,
+        size: pagination.pageSize
       }
 
-      const data: AccountImportsResponse = await response.json()
+      const data = await AccountService.getImports(agencia, contaCorrente, params)
+      
+      console.log('✅ Resposta da API de importações:', data)
       
       setImports(data.content)
       setPagination(prev => ({
@@ -110,8 +68,26 @@ export function ImportsPage() {
         totalElements: data.totalElements
       }))
     } catch (err) {
-      console.error('Erro ao buscar importações:', err)
-      setError('Erro ao carregar importações')
+      console.error('❌ Erro ao buscar importações:', err)
+      
+      // Melhorar mensagem de erro
+      let errorMessage = 'Erro ao carregar importações'
+      
+      if (err instanceof Error) {
+        if (err.message.includes('Network Error')) {
+          errorMessage = 'Erro de conexão com a API. Verifique se o servidor está rodando.'
+        } else if (err.message.includes('timeout')) {
+          errorMessage = 'Timeout na conexão com a API. Tente novamente.'
+        } else if (err.message.includes('404')) {
+          errorMessage = 'Endpoint de importações não encontrado na API.'
+        } else if (err.message.includes('500')) {
+          errorMessage = 'Erro interno do servidor. Tente novamente mais tarde.'
+        } else {
+          errorMessage = `Erro: ${err.message}`
+        }
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -120,25 +96,7 @@ export function ImportsPage() {
   // Carregar dados iniciais
   useEffect(() => {
     fetchImports()
-  }, [agencia, contaCorrente, filters, pagination.currentPage, pagination.pageSize])
-
-  // Aplicar filtros
-  const applyFilters = () => {
-    setPagination(prev => ({ ...prev, currentPage: 0 }))
-    fetchImports()
-  }
-
-  // Limpar filtros
-  const clearFilters = () => {
-    setFilters({
-      periodoType: 'mesAno',
-      mes: undefined,
-      ano: undefined,
-      dataInicio: undefined,
-      dataFim: undefined
-    })
-    setPagination(prev => ({ ...prev, currentPage: 0 }))
-  }
+  }, [agencia, contaCorrente, pagination.currentPage, pagination.pageSize])
 
   // Mudar página
   const changePage = (newPage: number) => {
@@ -201,119 +159,6 @@ export function ImportsPage() {
         </p>
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Tipo de Filtro */}
-          <div className="space-y-2">
-            <Label className="text-base font-medium">Tipo de Filtro</Label>
-            <RadioGroup
-              value={filters.periodoType}
-              onValueChange={(value: 'mesAno' | 'dataEspecifica') => setFilters(prev => ({ ...prev, periodoType: value }))}
-              className="flex space-x-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="mesAno" id="mesAno" />
-                <Label htmlFor="mesAno">Mês/Ano</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="dataEspecifica" id="dataEspecifica" />
-                <Label htmlFor="dataEspecifica">Período Específico</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {/* Campos de Filtro */}
-          {filters.periodoType === 'mesAno' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="mes">Mês</Label>
-                <Select
-                  value={filters.mes?.toString()}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, mes: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o mês" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {meses.map((mes) => (
-                      <SelectItem key={mes.value} value={mes.value.toString()}>
-                        {mes.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ano">Ano</Label>
-                <Select
-                  value={filters.ano?.toString()}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, ano: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o ano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {anos.map((ano) => (
-                      <SelectItem key={ano} value={ano.toString()}>
-                        {ano}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="dataInicio">Data Início</Label>
-                <Input
-                  id="dataInicio"
-                  type="datetime-local"
-                  value={filters.dataInicio}
-                  onChange={(e) => setFilters(prev => ({ ...prev, dataInicio: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dataFim">Data Fim</Label>
-                <Input
-                  id="dataFim"
-                  type="datetime-local"
-                  value={filters.dataFim}
-                  onChange={(e) => setFilters(prev => ({ ...prev, dataFim: e.target.value }))}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Botões de Filtro */}
-          <div className="flex flex-wrap gap-4">
-            <Button onClick={applyFilters} disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Aplicando...
-                </>
-              ) : (
-                <>
-                  <Database className="h-4 w-4 mr-2" />
-                  Aplicar Filtros
-                </>
-              )}
-            </Button>
-            
-            <Button variant="outline" onClick={clearFilters} disabled={loading}>
-              Limpar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Lista de Importações */}
       <Card>
         <CardHeader>
@@ -324,12 +169,7 @@ export function ImportsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-                <p className="text-muted-foreground">Carregando importações...</p>
-              </div>
-            </div>
+            <AppLoading />
           ) : error ? (
             <div className="flex items-center justify-center h-32">
               <div className="text-center">
@@ -344,103 +184,131 @@ export function ImportsPage() {
               <p>Nenhuma importação encontrada</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {imports.map((importItem) => (
-                <div key={importItem.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <Download className="h-5 w-5 text-green-500" />
-                      <span className="font-medium">ID: {importItem.id}</span>
-                      <Badge variant="secondary">
-                        Layout {importItem.layoutId || 'N/A'}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {formatDateTime(importItem.dataHora)}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-3">
-                    <div>
-                      <span className="text-muted-foreground">Arquivo:</span>
-                      <div className="font-medium flex items-center space-x-2">
-                        <FileText className="h-4 w-4" />
-                        <span>{importItem.arquivoNome || 'N/A'}</span>
+                <Card key={importItem.id} className="overflow-hidden">
+                  {/* Header do Card */}
+                  <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Download className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg">Importação #{importItem.id}</CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            Processada em {formatDateTime(importItem.dataHora)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary" className="text-xs">
+                          Layout {importItem.layoutId || 'N/A'}
+                        </Badge>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate(`/accounts/${agencia}/${contaCorrente}/imports/${importItem.id}`)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver Detalhes
+                        </Button>
                       </div>
                     </div>
-                    
-                    <div>
-                      <span className="text-muted-foreground">Versão Layout:</span>
-                      <div className="font-medium">{importItem.arquivoNumeroVersaoLayOut || 'N/A'}</div>
+                  </CardHeader>
+
+                  <CardContent className="p-6">
+                    {/* Informações do Arquivo */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                      <Card className="bg-gray-50">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-medium text-gray-700 flex items-center">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Informações do Arquivo
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Nome:</span>
+                            <span className="text-sm font-medium">{importItem.arquivoNome || 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Versão:</span>
+                            <span className="text-sm font-medium">{importItem.arquivoNumeroVersaoLayOut || 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Sequencial:</span>
+                            <span className="text-sm font-medium">{importItem.arquivoNumeroSequencial || 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Documento:</span>
+                            <span className="text-sm font-medium">{importItem.documentId || 'N/A'}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Estatísticas de Processamento */}
+                      <Card className="bg-green-50">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-medium text-green-700 flex items-center">
+                            <Database className="h-4 w-4 mr-2" />
+                            Estatísticas de Processamento
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-green-600">Registros:</span>
+                            <span className="text-sm font-medium text-green-800">{formatNumber(importItem.qtdRegistros)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-green-600">Contas:</span>
+                            <span className="text-sm font-medium text-green-800">{formatNumber(importItem.qtdContas)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-green-600">Lotes:</span>
+                            <span className="text-sm font-medium text-green-800">{formatNumber(importItem.qtdLotes)}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Período e Data */}
+                      <Card className="bg-purple-50">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-medium text-purple-700 flex items-center">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            Período e Data
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-purple-600">Período:</span>
+                            <span className="text-sm font-medium text-purple-800">
+                              {formatPeriodo(importItem.consultaPeriodoDe, importItem.consultaPeriodoAte)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-purple-600">Geração:</span>
+                            <span className="text-sm font-medium text-purple-800">
+                              {formatDateTime(importItem.arquivoGeracaoDataHora)}
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
-                    
-                    <div>
-                      <span className="text-muted-foreground">Sequencial:</span>
-                      <div className="font-medium flex items-center space-x-2">
-                        <Hash className="h-4 w-4" />
-                        <span>{importItem.arquivoNumeroSequencial || 'N/A'}</span>
+
+                    {/* Informações Adicionais */}
+                    {importItem.bancoOrigem && (
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <Database className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-800">
+                            Banco de Origem: {importItem.bancoOrigem}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div>
-                      <span className="text-muted-foreground">Documento:</span>
-                      <div className="font-medium">{importItem.documentId || 'N/A'}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-3">
-                    <div>
-                      <span className="text-muted-foreground">Registros:</span>
-                      <div className="font-medium flex items-center space-x-2">
-                        <Database className="h-4 w-4" />
-                        <span>{formatNumber(importItem.qtdRegistros)}</span>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <span className="text-muted-foreground">Contas:</span>
-                      <div className="font-medium flex items-center space-x-2">
-                        <User className="h-4 w-4" />
-                        <span>{formatNumber(importItem.qtdContas)}</span>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <span className="text-muted-foreground">Lotes:</span>
-                      <div className="font-medium flex items-center space-x-2">
-                        <Package className="h-4 w-4" />
-                        <span>{formatNumber(importItem.qtdLotes)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Período Consulta:</span>
-                      <div className="font-medium">
-                        {formatPeriodo(importItem.consultaPeriodoDe, importItem.consultaPeriodoAte)}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <span className="text-muted-foreground">Data Geração:</span>
-                      <div className="font-medium">
-                        {formatDateTime(importItem.arquivoGeracaoDataHora)}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-3 flex justify-end space-x-2">
-                    <Button variant="outline" size="sm">
-                      <FileText className="h-4 w-4 mr-1" />
-                      Ver Detalhes
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-1" />
-                      Download
-                    </Button>
-                  </div>
-                </div>
+                    )}
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
@@ -505,8 +373,6 @@ export function ImportsPage() {
           </CardContent>
         </Card>
       )}
-
-
     </div>
   )
 }

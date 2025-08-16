@@ -6,12 +6,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AppLoading } from '@/components/ui/AppLoading'
 import { 
   ChevronLeft, 
   ChevronRight, 
   ChevronsLeft, 
   ChevronsRight,
-  Loader2
 } from 'lucide-react'
 import type { PaginationResponse } from '@/types/rfc'
 
@@ -50,17 +50,9 @@ export function PaginatedList<T>({
   
   if (loading) {
     return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">Carregando...</p>
-            </div>
-          </div>
+      <Card>
+        <CardContent className="p-6 text-center">
+          <AppLoading />
         </CardContent>
       </Card>
     )

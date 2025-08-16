@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AppLoading } from '@/components/ui/AppLoading'
 import { 
-  Activity, 
+  Play, 
+  Square, 
   AlertCircle, 
-  CheckCircle, 
   Clock,
-  Eye, 
+  CheckCircle,
   XCircle,
-  Square,
-  Loader2
+  Activity,
+  Eye
 } from 'lucide-react'
 import { useSchedule } from '@/hooks/useSchedule'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
@@ -87,7 +88,7 @@ export function SchedulePage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'RUNNING': return <Activity className="h-4 w-4 animate-pulse" />
-      case 'STARTING': return <Loader2 className="h-4 w-4 animate-spin" />
+      case 'STARTING': return <Play className="h-4 w-4 animate-spin" />
       case 'COMPLETED': return <CheckCircle className="h-4 w-4" />
       case 'FAILED': return <XCircle className="h-4 w-4" />
       case 'CANCELLED': return <Square className="h-4 w-4" />
@@ -103,14 +104,7 @@ export function SchedulePage() {
   })
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando schedule...</p>
-        </div>
-      </div>
-    )
+    return <AppLoading />
   }
 
   if (error) {

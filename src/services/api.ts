@@ -9,13 +9,13 @@ import type { AxiosInstance, AxiosResponse, AxiosError } from 'axios'
 // Configurações de ambiente
 const API_CONFIG = {
   development: {
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000',
     timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
     retryAttempts: parseInt(import.meta.env.VITE_API_RETRY_ATTEMPTS || '3'),
     retryDelay: parseInt(import.meta.env.VITE_API_RETRY_DELAY || '1000')
   },
   production: {
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'https://api.coppetec.ufrj.br',
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'https://api.coppetec.org.br',
     timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '15000'),
     retryAttempts: parseInt(import.meta.env.VITE_API_RETRY_ATTEMPTS || '2'),
     retryDelay: parseInt(import.meta.env.VITE_API_RETRY_DELAY || '1000')
@@ -25,6 +25,16 @@ const API_CONFIG = {
 // Determinar ambiente
 const isDevelopment = import.meta.env.DEV
 const config = isDevelopment ? API_CONFIG.development : API_CONFIG.production
+
+// Log da configuração em desenvolvimento
+if (isDevelopment) {
+  console.log('🔧 API Config:', {
+    baseURL: config.baseURL,
+    timeout: config.timeout,
+    retryAttempts: config.retryAttempts,
+    retryDelay: config.retryDelay
+  })
+}
 
 // Interface para configuração de retry
 

@@ -1,15 +1,15 @@
 import { useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { AppLoading } from '@/components/ui/AppLoading'
 import { 
+  TrendingUp, 
   Activity, 
   CheckCircle, 
-  TrendingUp, 
-  Users,
-  AlertCircle,
-  XCircle
+  XCircle,
+  AlertCircle
 } from 'lucide-react'
 import { useSchedule } from '@/hooks/useSchedule'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
@@ -57,14 +57,7 @@ export function DashboardPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Activity className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando dashboard...</p>
-        </div>
-      </div>
-    )
+    return <AppLoading />
   }
 
   if (error) {
@@ -130,7 +123,7 @@ export function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Contas</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">

@@ -4,35 +4,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { AppLoading } from '@/components/ui/AppLoading'
 import { 
-  FileText, 
   AlertCircle, 
-  CheckCircle, 
-  XCircle, 
-  Loader2,
-  Database,
+  FileText, 
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CheckCircle,
+  XCircle
 } from 'lucide-react'
 import type { 
-  AccountQueryLogResponse, 
-  AccountQueryLogsResponse,
-  PeriodFilters 
+  AccountQueryLogResponse
 } from '@/types/rfc'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
+import { AccountService } from '@/services/accountService'
 
 /**
  * QueryLogsPage - Implementa EXATAMENTE o que está documentado nos RFCs
  * Endpoint: GET /api/accounts/{agencia}/{contaCorrente}/query-logs
- * Funcionalidade: Lista paginada de logs de consulta com filtros por período
+ * Funcionalidade: Lista paginada de logs de consulta para uma conta específica
  */
 export function QueryLogsPage() {
   const { agencia, contaCorrente } = useParams<{ agencia: string; contaCorrente: string }>()
 
-  
   const [logs, setLogs] = useState<AccountQueryLogResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -42,33 +36,6 @@ export function QueryLogsPage() {
     totalPages: 0,
     totalElements: 0
   })
-  
-  const [filters, setFilters] = useState<PeriodFilters>({
-    periodoType: 'mesAno',
-    mes: undefined,
-    ano: undefined,
-    dataInicio: undefined,
-    dataFim: undefined
-  })
-
-  // Meses para seleção
-  const meses = [
-    { value: 1, label: 'Janeiro' },
-    { value: 2, label: 'Fevereiro' },
-    { value: 3, label: 'Março' },
-    { value: 4, label: 'Abril' },
-    { value: 5, label: 'Maio' },
-    { value: 6, label: 'Junho' },
-    { value: 7, label: 'Julho' },
-    { value: 8, label: 'Agosto' },
-    { value: 9, label: 'Setembro' },
-    { value: 10, label: 'Outubro' },
-    { value: 11, label: 'Novembro' },
-    { value: 12, label: 'Dezembro' }
-  ]
-
-  // Anos para seleção (2000 até ano atual + 1)
-  const anos = Array.from({ length: 26 }, (_, i) => new Date().getFullYear() - 25 + i + 1)
 
   // Carregar logs de consulta
   const fetchLogs = async () => {
@@ -78,38 +45,30 @@ export function QueryLogsPage() {
     setError(null)
 
     try {
-      const params = new URLSearchParams()
+      console.log('Buscando logs para:', { agencia, contaCorrente, pagination })
       
-      // Adicionar filtros de período
-      if (filters.periodoType === 'mesAno') {
-        if (filters.mes) params.set('mes', filters.mes.toString())
-        if (filters.ano) params.set('ano', filters.ano.toString())
-      } else {
-        if (filters.dataInicio) params.set('dataInicio', filters.dataInicio)
-        if (filters.dataFim) params.set('dataFim', filters.dataFim)
+      const data = await AccountService.getQueryLogs(agencia, contaCorrente, {
+        agencia,
+        contaCorrente,
+        page: pagination.currentPage,
+        size: pagination.pageSize
+      })
+      
+      console.log('Resposta da API:', data)
+      
+      if (!data || !data.content) {
+        throw new Error('Resposta da API inválida')
       }
-      
-      // Adicionar parâmetros de paginação
-      params.set('page', pagination.currentPage.toString())
-      params.set('size', pagination.pageSize.toString())
-
-      const response = await fetch(`/api/accounts/${agencia}/${contaCorrente}/query-logs?${params.toString()}`)
-      
-      if (!response.ok) {
-        throw new Error('Erro ao buscar logs de consulta')
-      }
-
-      const data: AccountQueryLogsResponse = await response.json()
       
       setLogs(data.content)
       setPagination(prev => ({
         ...prev,
-        totalPages: data.totalPages,
-        totalElements: data.totalElements
+        totalPages: data.totalPages || 0,
+        totalElements: data.totalElements || 0
       }))
     } catch (err) {
       console.error('Erro ao buscar logs:', err)
-      setError('Erro ao carregar logs de consulta')
+      setError(err instanceof Error ? err.message : 'Erro ao carregar logs de consulta')
     } finally {
       setLoading(false)
     }
@@ -118,25 +77,7 @@ export function QueryLogsPage() {
   // Carregar dados iniciais
   useEffect(() => {
     fetchLogs()
-  }, [agencia, contaCorrente, filters, pagination.currentPage, pagination.pageSize])
-
-  // Aplicar filtros
-  const applyFilters = () => {
-    setPagination(prev => ({ ...prev, currentPage: 0 }))
-    fetchLogs()
-  }
-
-  // Limpar filtros
-  const clearFilters = () => {
-    setFilters({
-      periodoType: 'mesAno',
-      mes: undefined,
-      ano: undefined,
-      dataInicio: undefined,
-      dataFim: undefined
-    })
-    setPagination(prev => ({ ...prev, currentPage: 0 }))
-  }
+  }, [agencia, contaCorrente, pagination.currentPage, pagination.pageSize])
 
   // Mudar página
   const changePage = (newPage: number) => {
@@ -216,119 +157,6 @@ export function QueryLogsPage() {
         </p>
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Tipo de Filtro */}
-          <div className="space-y-2">
-            <Label className="text-base font-medium">Tipo de Filtro</Label>
-            <RadioGroup
-              value={filters.periodoType}
-              onValueChange={(value: 'mesAno' | 'dataEspecifica') => setFilters(prev => ({ ...prev, periodoType: value }))}
-              className="flex space-x-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="mesAno" id="mesAno" />
-                <Label htmlFor="mesAno">Mês/Ano</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="dataEspecifica" id="dataEspecifica" />
-                <Label htmlFor="dataEspecifica">Período Específico</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {/* Campos de Filtro */}
-          {filters.periodoType === 'mesAno' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="mes">Mês</Label>
-                <Select
-                  value={filters.mes?.toString()}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, mes: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o mês" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {meses.map((mes) => (
-                      <SelectItem key={mes.value} value={mes.value.toString()}>
-                        {mes.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ano">Ano</Label>
-                <Select
-                  value={filters.ano?.toString()}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, ano: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o ano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {anos.map((ano) => (
-                      <SelectItem key={ano} value={ano.toString()}>
-                        {ano}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="dataInicio">Data Início</Label>
-                <Input
-                  id="dataInicio"
-                  type="datetime-local"
-                  value={filters.dataInicio}
-                  onChange={(e) => setFilters(prev => ({ ...prev, dataInicio: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dataFim">Data Fim</Label>
-                <Input
-                  id="dataFim"
-                  type="datetime-local"
-                  value={filters.dataFim}
-                  onChange={(e) => setFilters(prev => ({ ...prev, dataFim: e.target.value }))}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Botões de Filtro */}
-          <div className="flex flex-wrap gap-4">
-            <Button onClick={applyFilters} disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Aplicando...
-                </>
-              ) : (
-                <>
-                  <Database className="h-4 w-4 mr-2" />
-                  Aplicar Filtros
-                </>
-              )}
-            </Button>
-            
-            <Button variant="outline" onClick={clearFilters} disabled={loading}>
-              Limpar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Lista de Logs */}
       <Card>
         <CardHeader>
@@ -339,12 +167,7 @@ export function QueryLogsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-                <p className="text-muted-foreground">Carregando logs...</p>
-              </div>
-            </div>
+            <AppLoading />
           ) : error ? (
             <div className="flex items-center justify-center h-32">
               <div className="text-center">
@@ -453,7 +276,7 @@ export function QueryLogsPage() {
                 <span className="text-sm text-muted-foreground">Itens por página:</span>
                 <Select
                   value={pagination.pageSize.toString()}
-                  onValueChange={(value) => changePageSize(parseInt(value))}
+                  onValueChange={(value: string) => changePageSize(parseInt(value))}
                 >
                   <SelectTrigger className="w-20">
                     <SelectValue />

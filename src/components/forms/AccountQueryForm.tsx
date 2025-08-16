@@ -22,7 +22,7 @@ const accountQuerySchema = z.object({
     .regex(/^\d{4}$/, 'Agência deve conter apenas números'),
   contaCorrente: z.string()
     .regex(/^(\d{2}\.\d{3}-\d|\d{5}-\d)$/, 'Formato inválido: XX.XXX-X ou XXXXX-X'),
-  periodo: z.enum(['mesAno', 'datasEspecificas']),
+  periodo: z.enum(['mesAno', 'datasEspecificas']).optional(),
   mes: z.number().min(1).max(12).optional(),
   ano: z.number().min(2000).max(2100).optional(),
   dataInicio: z.string().optional(),
@@ -30,12 +30,13 @@ const accountQuerySchema = z.object({
 }).refine((data) => {
   // Validação: mês/ano OU datas específicas, não ambos
   if (data.periodo === 'mesAno') {
-    return data.mes && data.ano && !data.dataInicio && !data.dataFim
-  } else {
-    return data.dataInicio && data.dataFim && !data.mes && !data.ano
+    return data.mes && data.ano
+  } else if (data.periodo === 'datasEspecificas') {
+    return data.dataInicio && data.dataFim
   }
+  return false
 }, {
-  message: 'Selecione mês/ano OU datas específicas, não ambos',
+  message: 'Selecione mês/ano OU datas específicas',
   path: ['periodo']
 }).refine((data) => {
   // Validação: data início <= data fim
@@ -70,14 +71,38 @@ export function AccountQueryForm({ onSubmit, loading }: AccountQueryFormProps) {
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
-    setValue
+    formState: { errors },
+    setValue,
+    watch
   } = useForm<AccountQueryFormData>({
     resolver: zodResolver(accountQuerySchema),
-    mode: 'onChange'
+    mode: 'onChange',
+    defaultValues: {
+      periodo: 'mesAno',
+      mes: undefined,
+      ano: undefined,
+      dataInicio: undefined,
+      dataFim: undefined
+    }
   })
 
+  // Observar mudanças nos campos para validação
+  const watchedFields = watch(['agencia', 'contaCorrente', 'mes', 'ano', 'dataInicio', 'dataFim'])
 
+  // Verificar se o formulário é válido
+  const isFormValid = () => {
+    const [agencia, contaCorrente, mes, ano, dataInicio, dataFim] = watchedFields
+    
+    // Campos obrigatórios básicos
+    if (!agencia || !contaCorrente) return false
+    
+    // Validação de período
+    if (periodType === 'mesAno') {
+      return !!(mes && ano)
+    } else {
+      return !!(dataInicio && dataFim)
+    }
+  }
 
   const handleFormSubmit = (data: AccountQueryFormData) => {
     if (onSubmit) {
@@ -104,15 +129,17 @@ export function AccountQueryForm({ onSubmit, loading }: AccountQueryFormProps) {
   const handlePeriodTypeChange = (value: string) => {
     const newPeriodType = value as 'mesAno' | 'datasEspecificas'
     setPeriodType(newPeriodType)
-    setValue('periodo', newPeriodType)
+    
+    // Definir o valor do campo periodo no formulário
+    setValue('periodo', newPeriodType, { shouldValidate: true })
     
     // Limpar campos do outro tipo
     if (newPeriodType === 'mesAno') {
-      setValue('dataInicio', undefined)
-      setValue('dataFim', undefined)
+      setValue('dataInicio', undefined, { shouldValidate: true })
+      setValue('dataFim', undefined, { shouldValidate: true })
     } else {
-      setValue('mes', undefined)
-      setValue('ano', undefined)
+      setValue('mes', undefined, { shouldValidate: true })
+      setValue('ano', undefined, { shouldValidate: true })
     }
   }
 
@@ -270,7 +297,7 @@ export function AccountQueryForm({ onSubmit, loading }: AccountQueryFormProps) {
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={!isValid || loading}
+            disabled={!isFormValid() || loading}
           >
             {loading ? (
               <>

@@ -4,10 +4,12 @@ import { Layout } from '@/components/layout/Layout'
 // Páginas conforme RFCs
 import { DashboardPage } from '@/pages/DashboardPage'
 import { SchedulePage } from '@/pages/SchedulePage'
+import { JobDetailsPage } from '@/pages/JobDetailsPage'
 import { AccountsPage } from '@/pages/AccountsPage'
 import { AccountDetailsPage } from '@/pages/AccountDetailsPage'
 import { QueryLogsPage } from '@/pages/QueryLogsPage'
 import { ImportsPage } from '@/pages/ImportsPage'
+import { ImportDetailsPage } from '@/pages/ImportDetailsPage'
 import { MovementsPage } from '@/pages/MovementsPage'
 
 /**
@@ -40,6 +42,13 @@ export const router = createBrowserRouter([
         // Ações: POST /api/schedule/job/{jobName}/cancel
       },
       {
+        path: 'schedule/job/:jobName',
+        element: <JobDetailsPage />,
+        // Detalhes específicos de um job
+        // Endpoint: GET /api/schedule/job/{jobName}
+        // Ações: POST /api/schedule/job/{jobName}/cancel
+      },
+      {
         path: 'accounts',
         element: <AccountsPage />,
         // Consulta de contas bancárias
@@ -68,6 +77,12 @@ export const router = createBrowserRouter([
         // Endpoint: GET /api/accounts/{agencia}/{contaCorrente}/imports
         // Filtros: período (mês/ano ou datas específicas)
         // Paginação conforme padrão da API
+      },
+      {
+        path: 'accounts/:agencia/:contaCorrente/imports/:importId',
+        element: <ImportDetailsPage />,
+        // Detalhes específicos de uma importação
+        // Endpoint: GET /api/accounts/{agencia}/{contaCorrente}/imports/{importId}
       },
       {
         path: 'accounts/:agencia/:contaCorrente/movements',
@@ -110,6 +125,11 @@ export const navigationStructure = {
     label: 'Schedule',
     description: 'Monitoramento de jobs e processos'
   },
+  jobDetails: {
+    path: '/schedule/job/:jobName',
+    label: 'Detalhes do Job',
+    description: 'Detalhes específicos de um job'
+  },
   accounts: {
     path: '/accounts',
     label: 'Contas',
@@ -129,6 +149,11 @@ export const navigationStructure = {
     path: '/accounts/:agencia/:contaCorrente/imports',
     label: 'Importações',
     description: 'Histórico de importações'
+  },
+  importDetails: {
+    path: '/accounts/:agencia/:contaCorrente/imports/:importId',
+    label: 'Detalhes da Importação',
+    description: 'Detalhes específicos de uma importação'
   },
   movements: {
     path: '/accounts/:agencia/:contaCorrente/movements',
@@ -152,7 +177,19 @@ export const generateBreadcrumbs = (
   ]
 
   if (pathname.startsWith('/schedule')) {
-    breadcrumbs.push({ label: 'Schedule', path: '/schedule', active: true })
+    breadcrumbs.push({ label: 'Schedule', path: '/schedule', active: false })
+    
+    // Verificar se é uma rota de detalhes do job
+    const jobMatch = pathname.match(/^\/schedule\/job\/(.+)$/)
+    if (jobMatch) {
+      breadcrumbs.push({ 
+        label: 'Detalhes do Job', 
+        path: pathname, 
+        active: true 
+      })
+    } else {
+      breadcrumbs[breadcrumbs.length - 1].active = true
+    }
   } else if (pathname.startsWith('/accounts')) {
     breadcrumbs.push({ label: 'Contas', path: '/accounts', active: false })
     
@@ -167,7 +204,14 @@ export const generateBreadcrumbs = (
       if (pathname.includes('/logs')) {
         breadcrumbs.push({ label: 'Logs', path: `${accountPath}/logs`, active: true })
       } else if (pathname.includes('/imports')) {
-        breadcrumbs.push({ label: 'Importações', path: `${accountPath}/imports`, active: true })
+        // Verificar se é uma rota de detalhes da importação
+        const importMatch = pathname.match(/^\/accounts\/\d{4}\/\d{1,5}-\d\/imports\/(.+)$/)
+        if (importMatch) {
+          breadcrumbs.push({ label: 'Importações', path: `${accountPath}/imports`, active: false })
+          breadcrumbs.push({ label: `Importação #${importMatch[1]}`, path: pathname, active: true })
+        } else {
+          breadcrumbs.push({ label: 'Importações', path: `${accountPath}/imports`, active: true })
+        }
       } else if (pathname.includes('/movements')) {
         breadcrumbs.push({ label: 'Movimentações', path: `${accountPath}/movements`, active: true })
       }
@@ -186,10 +230,12 @@ export const isValidRoute = (pathname: string): boolean => {
   const validRoutes = [
     '/',
     '/schedule',
+    /^\/schedule\/job\/[^\/]+$/,
     '/accounts',
     /^\/accounts\/\d{4}\/\d{1,5}-\d$/,
     /^\/accounts\/\d{4}\/\d{1,5}-\d\/logs$/,
     /^\/accounts\/\d{4}\/\d{1,5}-\d\/imports$/,
+    /^\/accounts\/\d{4}\/\d{1,5}-\d\/imports\/[^\/]+$/,
     /^\/accounts\/\d{4}\/\d{1,5}-\d\/movements$/
   ]
 

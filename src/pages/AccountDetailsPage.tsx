@@ -1,6 +1,8 @@
 import { useParams, useSearchParams, Link } from 'react-router-dom'
+import { useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { 
   Building2, 
   CreditCard, 
@@ -9,10 +11,18 @@ import {
   TrendingUp,
   AlertCircle,
   Database,
-  Calendar,
-  Banknote
+  Banknote,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Activity,
+  BarChart3,
+  Shield
 } from 'lucide-react'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
+import { useAccounts } from '@/hooks/useAccounts'
+import type { AccountQueryParams } from '@/types/rfc'
+import { AppLoading } from '@/components/ui/AppLoading'
 
 /**
  * AccountDetailsPage - Implementa EXATAMENTE o que está documentado nos RFCs
@@ -22,6 +32,7 @@ import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
 export function AccountDetailsPage() {
   const { agencia, contaCorrente } = useParams()
   const [searchParams] = useSearchParams()
+  const { queryLogs, imports, movements, loading, error, fetchQueryLogs, fetchImports, fetchMovements } = useAccounts()
 
   // Extrair parâmetros da URL
   const mes = searchParams.get('mes')
@@ -45,6 +56,30 @@ export function AccountDetailsPage() {
     return 'Período não especificado'
   }
 
+  // Carregar dados da conta
+  useEffect(() => {
+    if (agencia && contaCorrente) {
+      const params: AccountQueryParams = {
+        agencia,
+        contaCorrente,
+        page: 0,
+        size: 1 // Apenas para contar total
+      }
+      
+      if (mes && ano) {
+        params.mes = parseInt(mes)
+        params.ano = parseInt(ano)
+      } else if (dataInicio && dataFim) {
+        params.dataInicio = dataInicio
+        params.dataFim = dataFim
+      }
+
+      fetchQueryLogs(agencia, contaCorrente, params)
+      fetchImports(agencia, contaCorrente, params)
+      fetchMovements(agencia, contaCorrente, params)
+    }
+  }, [agencia, contaCorrente, mes, ano, dataInicio, dataFim, fetchQueryLogs, fetchImports, fetchMovements])
+
   // Gerar URLs para sub-seções
   const generateSubSectionUrl = (section: string) => {
     const baseUrl = `/accounts/${agencia}/${contaCorrente}/${section}`
@@ -59,6 +94,26 @@ export function AccountDetailsPage() {
     return queryString ? `${baseUrl}?${queryString}` : baseUrl
   }
 
+  // Calcular estatísticas
+  const getEstatisticas = () => {
+    const totalConsultas = queryLogs?.totalElements || 0
+    const totalImportacoes = imports?.totalElements || 0
+    const totalMovimentacoes = movements?.totalElements || 0
+    
+    const consultasSucesso = queryLogs?.content?.filter(log => log.erroCodigo === 0).length || 0
+    const consultasErro = totalConsultas - consultasSucesso
+    const taxaSucesso = totalConsultas > 0 ? (consultasSucesso / totalConsultas * 100).toFixed(1) : 0
+    
+    return {
+      totalConsultas,
+      totalImportacoes,
+      totalMovimentacoes,
+      consultasSucesso,
+      consultasErro,
+      taxaSucesso
+    }
+  }
+
   if (!agencia || !contaCorrente) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -69,6 +124,8 @@ export function AccountDetailsPage() {
       </div>
     )
   }
+
+  const stats = getEstatisticas()
 
   return (
     <div className="space-y-6">
@@ -83,104 +140,189 @@ export function AccountDetailsPage() {
         <h1 className="text-3xl font-bold tracking-tight">Detalhes da Conta</h1>
         <p className="text-muted-foreground">
           Informações e histórico da conta {agencia}/{contaCorrente}
+          {mes || dataInicio ? ` • Período: ${getPeriodoConsulta()}` : ''}
         </p>
       </div>
 
+      {/* Cards de Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total de Consultas */}
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between text-lg">
+              <span>Consultas</span>
+              <Database className="h-5 w-5 text-blue-600" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-700 mb-2">
+              {loading ? '...' : stats.totalConsultas.toLocaleString('pt-BR')}
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-blue-600">
+                <CheckCircle className="h-4 w-4 inline mr-1" />
+                {stats.consultasSucesso} sucesso
+              </span>
+              <span className="text-red-600">
+                <XCircle className="h-4 w-4 inline mr-1" />
+                {stats.consultasErro} erro
+              </span>
+            </div>
+            <div className="mt-2 text-xs text-blue-600">
+              Taxa de sucesso: {stats.taxaSucesso}%
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total de Importações */}
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between text-lg">
+              <span>Importações</span>
+              <Download className="h-5 w-5 text-green-600" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-700 mb-2">
+              {loading ? '...' : stats.totalImportacoes.toLocaleString('pt-BR')}
+            </div>
+            <div className="text-sm text-green-600">
+              <Activity className="h-4 w-4 inline mr-1" />
+              Arquivos processados
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total de Movimentações */}
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between text-lg">
+              <span>Movimentações</span>
+              <TrendingUp className="h-5 w-5 text-purple-600" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-purple-700 mb-2">
+              {loading ? '...' : stats.totalMovimentacoes.toLocaleString('pt-BR')}
+            </div>
+            <div className="text-sm text-purple-600">
+              <BarChart3 className="h-4 w-4 inline mr-1" />
+              Transações financeiras
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Status da Conta */}
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between text-lg">
+              <span>Status</span>
+              <Shield className="h-5 w-5 text-orange-600" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-700 mb-2">
+              Ativa
+            </div>
+            <div className="text-sm text-orange-600">
+              <Clock className="h-4 w-4 inline mr-1" />
+              Última atualização: Hoje
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Informações da Conta */}
-      <Card>
+      <Card className="bg-gradient-to-r from-slate-50 to-slate-100">
         <CardHeader>
-          <CardTitle>Informações da Conta</CardTitle>
+          <CardTitle className="flex items-center space-x-2">
+            <Banknote className="h-6 w-6 text-slate-600" />
+            <span>Informações da Conta</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-center space-x-3">
-              <Building2 className="h-5 w-5 text-muted-foreground" />
+            <div className="flex items-center space-x-3 p-4 bg-white rounded-lg shadow-sm">
+              <Building2 className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Agência</p>
-                <p className="font-medium">{agencia}</p>
+                <p className="text-xl font-bold text-blue-700">{agencia}</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <CreditCard className="h-5 w-5 text-muted-foreground" />
+            <div className="flex items-center space-x-3 p-4 bg-white rounded-lg shadow-sm">
+              <CreditCard className="h-8 w-8 text-green-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Conta Corrente</p>
-                <p className="font-medium">{contaCorrente}</p>
+                <p className="text-xl font-bold text-green-700">{contaCorrente}</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <Banknote className="h-5 w-5 text-muted-foreground" />
+            <div className="flex items-center space-x-3 p-4 bg-white rounded-lg shadow-sm">
+              <Banknote className="h-8 w-8 text-purple-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Banco</p>
-                <p className="font-medium">001 - Banco do Brasil</p>
+                <p className="text-xl font-bold text-purple-700">001 - Banco do Brasil</p>
               </div>
             </div>
           </div>
-          
-          {mes || dataInicio ? (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <div className="flex items-center space-x-2 text-blue-800">
-                <Calendar className="h-4 w-4" />
-                <span className="font-medium">Período de Consulta:</span>
-                <span>{getPeriodoConsulta()}</span>
-              </div>
-            </div>
-          ) : null}
         </CardContent>
       </Card>
 
-      {/* Navegação */}
+      {/* Navegação para Sub-seções */}
       <Card>
         <CardHeader>
-          <CardTitle>Navegação</CardTitle>
+          <CardTitle className="flex items-center space-x-2">
+            <Activity className="h-6 w-6 text-blue-600" />
+            <span>Explorar Dados da Conta</span>
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Acesse as seções específicas para visualizar dados detalhados
+          </p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Link to={generateSubSectionUrl('logs')}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <FileText className="h-8 w-8 text-blue-500" />
-                    <div>
-                      <h3 className="font-medium">Logs de Consulta</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Histórico de tentativas de consulta
-                      </p>
-                    </div>
-                  </div>
+              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100">
+                <CardContent className="p-6 text-center">
+                  <FileText className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-blue-800 mb-2">Logs de Consulta</h3>
+                  <p className="text-blue-600 mb-4">
+                    Histórico detalhado de tentativas de consulta
+                  </p>
+                  <Badge variant="secondary" className="bg-blue-200 text-blue-800">
+                    {stats.totalConsultas} registros
+                  </Badge>
                 </CardContent>
               </Card>
             </Link>
             
             <Link to={generateSubSectionUrl('imports')}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <Download className="h-8 w-8 text-green-500" />
-                    <div>
-                      <h3 className="font-medium">Importações</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Histórico de arquivos processados
-                      </p>
-                    </div>
-                  </div>
+              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-green-200 bg-gradient-to-br from-green-50 to-green-100">
+                <CardContent className="p-6 text-center">
+                  <Download className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-green-800 mb-2">Importações</h3>
+                  <p className="text-green-600 mb-4">
+                    Histórico de arquivos processados e importados
+                  </p>
+                  <Badge variant="secondary" className="bg-green-200 text-green-800">
+                    {stats.totalImportacoes} arquivos
+                  </Badge>
                 </CardContent>
               </Card>
             </Link>
             
             <Link to={generateSubSectionUrl('movements')}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <TrendingUp className="h-8 w-8 text-purple-500" />
-                    <div>
-                      <h3 className="font-medium">Movimentações</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Histórico de transações financeiras
-                      </p>
-                    </div>
-                  </div>
+              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100">
+                <CardContent className="p-6 text-center">
+                  <TrendingUp className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-purple-800 mb-2">Movimentações</h3>
+                  <p className="text-purple-600 mb-4">
+                    Histórico de transações financeiras da conta
+                  </p>
+                  <Badge variant="secondary" className="bg-purple-200 text-purple-800">
+                    {stats.totalMovimentacoes} transações
+                  </Badge>
                 </CardContent>
               </Card>
             </Link>
@@ -188,52 +330,27 @@ export function AccountDetailsPage() {
         </CardContent>
       </Card>
 
-      {/* Resumo de Atividades */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Resumo de Atividades</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-blue-600">
-                <Database className="h-6 w-6 mx-auto mb-2" />
-                -
-              </div>
-              <div className="text-sm text-muted-foreground">Total de Consultas</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-green-600">
-                <Download className="h-6 w-6 mx-auto mb-2" />
-                -
-              </div>
-              <div className="text-sm text-muted-foreground">Total de Importações</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-purple-600">
-                <TrendingUp className="h-6 w-6 mx-auto mb-2" />
-                -
-              </div>
-              <div className="text-sm text-muted-foreground">Total de Movimentações</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-orange-600">
-                <Calendar className="h-6 w-6 mx-auto mb-2" />
-                Hoje
-              </div>
-              <div className="text-sm text-muted-foreground">Última Atualização</div>
-            </div>
-          </div>
-          
-          <div className="mt-6 p-4 bg-gray-50 rounded-md">
-            <p className="text-sm text-muted-foreground text-center">
-              Os dados detalhados estarão disponíveis nas respectivas seções
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Estado de Carregamento */}
+      {loading && (
+        <AppLoading />
+      )}
 
-
+      {/* Estado de Erro */}
+      {error && (
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-6 text-center">
+            <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-4" />
+            <p className="text-red-700 mb-4">{error}</p>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.reload()}
+              className="border-red-300 text-red-700 hover:bg-red-100"
+            >
+              Tentar Novamente
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
