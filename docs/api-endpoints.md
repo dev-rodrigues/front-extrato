@@ -40,7 +40,124 @@ Todos os endpoints de listagem suportam paginação com os seguintes parâmetros
 
 ## Endpoints
 
-### 1. Consulta de Logs de Consulta
+### 1. Monitoramento de Schedule
+
+#### `GET /api/schedule/progress`
+
+Consulta o progresso atual de todos os jobs agendados, incluindo métricas agregadas e lista de jobs ativos.
+
+**Resposta de Sucesso (200):**
+```json
+{
+  "activeJobs": 2,
+  "completedJobs": 15,
+  "failedJobs": 1,
+  "cancelledJobs": 0,
+  "averageExecutionTime": 45000,
+  "successRate": 0.9375,
+  "totalRecordsProcessed": 1250,
+  "totalAccountsProcessed": 8,
+  "activeJobsList": [
+    {
+      "jobName": "consulta-extrato-1234567890",
+      "status": "RUNNING",
+      "statusDescription": "Executando",
+      "startTime": "2024-01-15T14:30:00",
+      "endTime": null,
+      "durationMs": null,
+      "recordsProcessed": 1250,
+      "accountsProcessed": 8,
+      "progressPercentage": 75,
+      "errorMessage": null,
+      "estimatedTimeRemaining": 15000,
+      "lastUpdated": "2024-01-15T14:35:00"
+    }
+  ]
+}
+```
+
+#### `GET /api/schedule/active`
+
+Lista todos os jobs atualmente em execução.
+
+**Resposta de Sucesso (200):**
+```json
+[
+  {
+    "jobName": "consulta-extrato-1234567890",
+    "status": "RUNNING",
+    "statusDescription": "Executando",
+    "startTime": "2024-01-15T14:30:00",
+    "progressPercentage": 75,
+    "recordsProcessed": 1250,
+    "accountsProcessed": 8,
+    "lastUpdated": "2024-01-15T14:35:00"
+  }
+]
+```
+
+#### `GET /api/schedule/job/{jobName}`
+
+Consulta o status de um job específico.
+
+**Parâmetros de Path:**
+- `jobName` (string, obrigatório): Nome do job
+
+**Resposta de Sucesso (200):**
+```json
+{
+  "jobName": "consulta-extrato-1234567890",
+  "status": "RUNNING",
+  "statusDescription": "Executando",
+  "startTime": "2024-01-15T14:30:00",
+  "progressPercentage": 75,
+  "recordsProcessed": 1250,
+  "accountsProcessed": 8,
+  "lastUpdated": "2024-01-15T14:35:00"
+}
+```
+
+#### `GET /api/schedule/stats`
+
+Obtém estatísticas resumidas do sistema de monitoramento.
+
+**Resposta de Sucesso (200):**
+```json
+{
+  "totalJobs": 18,
+  "runningJobs": 2,
+  "completedJobs": 15,
+  "failedJobs": 1,
+  "cancelledJobs": 0,
+  "totalRecordsProcessed": 1250,
+  "totalAccountsProcessed": 8
+}
+```
+
+#### `POST /api/schedule/job/{jobName}/cancel`
+
+Cancela um job em execução.
+
+**Parâmetros de Path:**
+- `jobName` (string, obrigatório): Nome do job
+
+**Resposta de Sucesso (200):** Job cancelado com sucesso
+
+#### `GET /api/schedule/health`
+
+Health check do sistema de monitoramento.
+
+**Resposta de Sucesso (200):**
+```json
+{
+  "status": "HEALTHY",
+  "timestamp": "2024-01-15T14:35:00",
+  "activeJobs": 2,
+  "totalJobs": 18
+}
+```
+
+### 2. Consulta de Logs de Consulta
 
 #### `GET /api/accounts/{agencia}/{contaCorrente}/query-logs`
 

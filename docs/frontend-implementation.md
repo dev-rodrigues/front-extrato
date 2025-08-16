@@ -16,7 +16,7 @@ O frontend deve consumir a API de consulta de extratos bancários, fornecendo um
 - **Formulários**: React Hook Form + Zod para validação
 - **Roteamento**: React Router DOM
 - **Ícones**: Lucide React (padrão shadcn/ui)
-- **Build Tool**: Vite ou Next.js
+- **Build Tool**: Vite
 
 ### Estrutura de Pastas
 ```
