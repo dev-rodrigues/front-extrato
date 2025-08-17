@@ -15,7 +15,7 @@ const API_CONFIG = {
     retryDelay: parseInt(import.meta.env.VITE_API_RETRY_DELAY || '1000')
   },
   production: {
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'https://api.coppetec.org.br',
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://146.164.65.231/EXTRATO',
     timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '15000'),
     retryAttempts: parseInt(import.meta.env.VITE_API_RETRY_ATTEMPTS || '2'),
     retryDelay: parseInt(import.meta.env.VITE_API_RETRY_DELAY || '1000')
