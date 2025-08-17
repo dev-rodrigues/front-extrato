@@ -12,6 +12,9 @@ PORT="3000"
 DOCKERHUB_USERNAME="httpsantos"
 DOCKERHUB_REPO="front-extrato"
 
+# Obter versão do git tag ou usar padrão
+VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "1.1.0")
+
 echo "🐳 Docker Build Script para Frontend BB Extrato"
 echo "================================================"
 
@@ -41,24 +44,30 @@ case "${1:-build}" in
     "push")
         echo "📤 Fazendo push para Docker Hub..."
         echo "🏷️  Tagging imagem para ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}"
+        echo "📋 Versão atual: v${VERSION}"
         
         # Tag da imagem para Docker Hub
         docker tag ${IMAGE_NAME}:${TAG} ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:${TAG}
         docker tag ${IMAGE_NAME}:${TAG} ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:latest
+        docker tag ${IMAGE_NAME}:${TAG} ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:v${VERSION}
         
         # Push para Docker Hub
         echo "📤 Enviando tag ${TAG}..."
         docker push ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:${TAG}
         echo "📤 Enviando tag latest..."
         docker push ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:latest
+        echo "📤 Enviando tag v${VERSION}..."
+        docker push ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:v${VERSION}
         
         echo "✅ Push para Docker Hub concluído com sucesso!"
         echo "🌐 Imagem disponível em: https://hub.docker.com/r/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}"
+        echo "🏷️  Tags disponíveis: ${TAG}, latest, v${VERSION}"
         ;;
     
     "build-and-push")
         echo "🚀 Build + Push completo para Docker Hub..."
         echo "📱 Build cross-platform otimizado para servidor Linux"
+        echo "📋 Versão atual: v${VERSION}"
         
         # Build da imagem
         export DOCKER_BUILDKIT=1
@@ -71,12 +80,15 @@ case "${1:-build}" in
         # Tag e push
         docker tag ${IMAGE_NAME}:${TAG} ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:${TAG}
         docker tag ${IMAGE_NAME}:${TAG} ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:latest
+        docker tag ${IMAGE_NAME}:${TAG} ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:v${VERSION}
         
         docker push ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:${TAG}
         docker push ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:latest
+        docker push ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:v${VERSION}
         
         echo "✅ Build + Push concluído com sucesso!"
         echo "🌐 Imagem disponível em: https://hub.docker.com/r/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}"
+        echo "🏷️  Tags disponíveis: ${TAG}, latest, v${VERSION}"
         ;;
     
     "login")
@@ -87,6 +99,19 @@ case "${1:-build}" in
         echo "⚠️  Certifique-se de estar logado no Docker Hub antes de fazer push"
         echo "💡 Use: docker login"
         docker login
+        ;;
+    
+    "versions")
+        echo "🏷️  Versões disponíveis:"
+        echo "📋 Git Tag atual: v${VERSION}"
+        echo ""
+        echo "🐳 Imagens Docker Hub:"
+        docker images ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO} 2>/dev/null || echo "Nenhuma imagem encontrada"
+        echo ""
+        echo "📊 Tags disponíveis:"
+        echo "  - ${TAG} (versão de produção)"
+        echo "  - latest (versão mais recente)"
+        echo "  - v${VERSION} (versão numerada)"
         ;;
     
     "run")
@@ -138,7 +163,7 @@ case "${1:-build}" in
         ;;
     
     *)
-        echo "❌ Uso: $0 [build|build-prod|push|build-and-push|login|run|compose|stop|clean|logs|status]"
+        echo "❌ Uso: $0 [build|build-prod|push|build-and-push|login|versions|run|compose|stop|clean|logs|status]"
         echo ""
         echo "Comandos disponíveis:"
         echo "  build         - Construir imagem Docker (AMD64 para Linux)"
@@ -146,6 +171,7 @@ case "${1:-build}" in
         echo "  push          - Fazer push da imagem para Docker Hub"
         echo "  build-and-push - Build + Push completo para Docker Hub"
         echo "  login         - Login no Docker Hub"
+        echo "  versions      - Listar versões disponíveis"
         echo "  run           - Executar container"
         echo "  compose       - Executar com Docker Compose"
         echo "  stop          - Parar e remover container"
@@ -154,6 +180,7 @@ case "${1:-build}" in
         echo "  status        - Verificar status"
         echo ""
         echo "🐳 Docker Hub: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}"
+        echo "📋 Versão atual: v${VERSION}"
         exit 1
         ;;
 esac
