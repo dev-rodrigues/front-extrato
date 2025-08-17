@@ -1,5 +1,6 @@
 # Multi-stage build para otimização de tamanho
-FROM node:18-alpine AS builder
+# Build para arquitetura AMD64 (Linux x86_64)
+FROM --platform=linux/amd64 node:18-alpine AS builder
 
 # Definir diretório de trabalho
 WORKDIR /app
@@ -22,7 +23,7 @@ ENV VITE_APP_ENV=production
 RUN npm run build
 
 # Stage de produção com nginx
-FROM nginx:alpine AS production
+FROM --platform=linux/amd64 nginx:alpine AS production
 
 # Copiar arquivos buildados do stage anterior
 COPY --from=builder /app/dist /usr/share/nginx/html
