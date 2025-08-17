@@ -9,7 +9,7 @@ import type { AxiosInstance, AxiosResponse, AxiosError } from 'axios'
 // Configurações de ambiente
 const API_CONFIG = {
   development: {
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000',
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://146.164.65.231/EXTRATO',
     timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
     retryAttempts: parseInt(import.meta.env.VITE_API_RETRY_ATTEMPTS || '3'),
     retryDelay: parseInt(import.meta.env.VITE_API_RETRY_DELAY || '1000')

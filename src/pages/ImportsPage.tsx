@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +29,13 @@ import { AccountService } from '@/services/accountService'
 export function ImportsPage() {
   const { agencia, contaCorrente } = useParams<{ agencia: string; contaCorrente: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  // Extrair parâmetros de período da URL
+  const mes = searchParams.get('mes')
+  const ano = searchParams.get('ano')
+  const dataInicio = searchParams.get('dataInicio')
+  const dataFim = searchParams.get('dataFim')
 
   const [imports, setImports] = useState<AccountImportResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,13 +55,22 @@ export function ImportsPage() {
     setError(null)
 
     try {
-      console.log('🔄 Buscando importações para:', { agencia, contaCorrente, pagination })
+      console.log('🔄 Buscando importações para:', { agencia, contaCorrente, pagination, mes, ano, dataInicio, dataFim })
       
-      const params = {
+      const params: any = {
         agencia,
         contaCorrente,
         page: pagination.currentPage,
         size: pagination.pageSize
+      }
+
+      // Adicionar parâmetros de período se existirem
+      if (mes && ano) {
+        params.mes = parseInt(mes)
+        params.ano = parseInt(ano)
+      } else if (dataInicio && dataFim) {
+        params.dataInicio = dataInicio
+        params.dataFim = dataFim
       }
 
       const data = await AccountService.getImports(agencia, contaCorrente, params)
@@ -96,7 +112,7 @@ export function ImportsPage() {
   // Carregar dados iniciais
   useEffect(() => {
     fetchImports()
-  }, [agencia, contaCorrente, pagination.currentPage, pagination.pageSize])
+  }, [agencia, contaCorrente, pagination.currentPage, pagination.pageSize, mes, ano, dataInicio, dataFim])
 
   // Mudar página
   const changePage = (newPage: number) => {
@@ -131,7 +147,21 @@ export function ImportsPage() {
   // Gerar breadcrumbs
   const breadcrumbs = [
     { label: 'Contas', href: '/accounts' },
-    { label: `${agencia}/${contaCorrente}`, href: `/accounts/${agencia}/${contaCorrente}` },
+    { 
+      label: `${agencia}/${contaCorrente}`, 
+      href: (() => {
+        const baseUrl = `/accounts/${agencia}/${contaCorrente}`
+        const params = new URLSearchParams()
+        
+        if (mes) params.set('mes', mes)
+        if (ano) params.set('ano', ano)
+        if (dataInicio) params.set('dataInicio', dataInicio)
+        if (dataFim) params.set('dataFim', dataFim)
+        
+        const queryString = params.toString()
+        return queryString ? `${baseUrl}?${queryString}` : baseUrl
+      })()
+    },
     { label: 'Importações', href: `/accounts/${agencia}/${contaCorrente}/imports` }
   ]
 
@@ -208,7 +238,19 @@ export function ImportsPage() {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => navigate(`/accounts/${agencia}/${contaCorrente}/imports/${importItem.id}`)}
+                          onClick={() => {
+                            const baseUrl = `/accounts/${agencia}/${contaCorrente}/imports/${importItem.id}`
+                            const params = new URLSearchParams()
+                            
+                            if (mes) params.set('mes', mes)
+                            if (ano) params.set('ano', ano)
+                            if (dataInicio) params.set('dataInicio', dataInicio)
+                            if (dataFim) params.set('dataFim', dataFim)
+                            
+                            const queryString = params.toString()
+                            const fullUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl
+                            navigate(fullUrl)
+                          }}
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           Ver Detalhes

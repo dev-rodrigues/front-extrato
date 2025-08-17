@@ -54,6 +54,14 @@ type AccountQueryFormData = z.infer<typeof accountQuerySchema>
 interface AccountQueryFormProps {
   onSubmit?: (data: AccountQueryFormData) => void
   loading?: boolean
+  initialValues?: {
+    agencia?: string
+    contaCorrente?: string
+    mes?: number
+    ano?: number
+    dataInicio?: string
+    dataFim?: string
+  }
 }
 
 /**
@@ -64,7 +72,7 @@ interface AccountQueryFormProps {
  * - Período: mês/ano OU datas específicas (não ambos)
  * - Validação de datas
  */
-export function AccountQueryForm({ onSubmit, loading }: AccountQueryFormProps) {
+export function AccountQueryForm({ onSubmit, loading, initialValues }: AccountQueryFormProps) {
   const navigate = useNavigate()
   const [periodType, setPeriodType] = useState<'mesAno' | 'datasEspecificas'>('mesAno')
 
@@ -78,11 +86,13 @@ export function AccountQueryForm({ onSubmit, loading }: AccountQueryFormProps) {
     resolver: zodResolver(accountQuerySchema),
     mode: 'onChange',
     defaultValues: {
+      agencia: initialValues?.agencia || '',
+      contaCorrente: initialValues?.contaCorrente || '',
       periodo: 'mesAno',
-      mes: undefined,
-      ano: undefined,
-      dataInicio: undefined,
-      dataFim: undefined
+      mes: initialValues?.mes || undefined,
+      ano: initialValues?.ano || new Date().getFullYear(),
+      dataInicio: initialValues?.dataInicio || undefined,
+      dataFim: initialValues?.dataFim || undefined
     }
   })
 
@@ -194,9 +204,12 @@ export function AccountQueryForm({ onSubmit, loading }: AccountQueryFormProps) {
           {/* Tipo de Período */}
           <div className="space-y-2">
             <Label>Tipo de Período</Label>
-            <Select value={periodType} onValueChange={handlePeriodTypeChange}>
+            <Select 
+              value={watch('periodo')} 
+              onValueChange={handlePeriodTypeChange}
+            >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Selecione o tipo de período" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="mesAno">Mês e Ano</SelectItem>
@@ -211,7 +224,10 @@ export function AccountQueryForm({ onSubmit, loading }: AccountQueryFormProps) {
               {/* Mês */}
               <div className="space-y-2">
                 <Label htmlFor="mes">Mês</Label>
-                <Select onValueChange={(value) => setValue('mes', parseInt(value))}>
+                <Select 
+                  value={watch('mes')?.toString() || ''} 
+                  onValueChange={(value) => setValue('mes', parseInt(value))}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o mês" />
                   </SelectTrigger>
@@ -231,12 +247,15 @@ export function AccountQueryForm({ onSubmit, loading }: AccountQueryFormProps) {
               {/* Ano */}
               <div className="space-y-2">
                 <Label htmlFor="ano">Ano</Label>
-                <Select onValueChange={(value) => setValue('ano', parseInt(value))}>
+                <Select 
+                  value={watch('ano')?.toString() || ''} 
+                  onValueChange={(value) => setValue('ano', parseInt(value))}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o ano" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 25 }, (_, i) => new Date().getFullYear() - 12 + i).map((ano) => (
+                    {Array.from({ length: 25 }, (_, i) => new Date().getFullYear() - i).map((ano) => (
                       <SelectItem key={ano} value={ano.toString()}>
                         {ano}
                       </SelectItem>

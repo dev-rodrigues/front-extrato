@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountQueryForm } from '@/components/forms/AccountQueryForm'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
-import { Building2, CreditCard, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 
 /**
  * Accounts Page - Implementa EXATAMENTE o que está documentado nos RFCs
@@ -10,6 +11,26 @@ import { Building2, CreditCard, Search } from 'lucide-react'
  * Suporte aos dois formatos de conta (com e sem ponto)
  */
 export function AccountsPage() {
+  const [searchParams] = useSearchParams()
+  
+  // Extrair parâmetros da URL para preencher o formulário
+  const agencia = searchParams.get('agencia')
+  const contaCorrente = searchParams.get('contaCorrente')
+  const mes = searchParams.get('mes')
+  const ano = searchParams.get('ano')
+  const dataInicio = searchParams.get('dataInicio')
+  const dataFim = searchParams.get('dataFim')
+  
+  // Criar objeto com os valores iniciais do formulário
+  const initialValues = {
+    agencia: agencia || '',
+    contaCorrente: contaCorrente || '',
+    mes: mes ? parseInt(mes) : undefined,
+    ano: ano ? parseInt(ano) : undefined,
+    dataInicio: dataInicio || undefined,
+    dataFim: dataFim || undefined
+  }
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -35,44 +56,7 @@ export function AccountsPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <AccountQueryForm />
-        </CardContent>
-      </Card>
-
-      {/* Funcionalidades Disponíveis */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <CreditCard className="h-5 w-5" />
-            <span>Funcionalidades Disponíveis</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 border rounded-lg">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <Search className="h-6 w-6 text-blue-600" />
-              </div>
-              <h4 className="font-medium text-sm mb-1">Logs de Consulta</h4>
-              <p className="text-xs text-muted-foreground">Histórico de tentativas de consulta</p>
-            </div>
-            
-            <div className="text-center p-4 border rounded-lg">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <Building2 className="h-6 w-6 text-green-600" />
-              </div>
-              <h4 className="font-medium text-sm mb-1">Importações</h4>
-              <p className="text-xs text-muted-foreground">Arquivos processados e importados</p>
-            </div>
-            
-            <div className="text-center p-4 border rounded-lg">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <CreditCard className="h-6 w-6 text-purple-600" />
-              </div>
-              <h4 className="font-medium text-sm mb-1">Movimentações</h4>
-              <p className="text-xs text-muted-foreground">Transações financeiras da conta</p>
-            </div>
-          </div>
+          <AccountQueryForm initialValues={initialValues} />
         </CardContent>
       </Card>
     </div>

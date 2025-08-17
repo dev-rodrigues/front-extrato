@@ -217,6 +217,34 @@ export type AccountImportsResponse = PaginationResponse<AccountImportResponse>
  */
 export type AccountMovementsResponse = PaginationResponse<AccountMovementResponse>
 
+/**
+ * Resposta de importação com movimentações
+ * Endpoint: GET /api/accounts/imports/{importId}
+ */
+export interface ImportWithMovementsResponse {
+  importacao: {
+    id: number
+    layoutId: number
+    documentId: number
+    bancoOrigem: string
+    arquivoNome: string
+    arquivoGeracaoDataHora: string
+    arquivoNumeroSequencial: number
+    arquivoNumeroVersaoLayOut: string
+    qtdLotes: number
+    qtdRegistros: number
+    qtdContas: number
+    dataHora: string
+    userId: number
+    consultaAgencia: string
+    consultaContaCorrente: string
+    consultaPeriodoDe: string
+    consultaPeriodoAte: string
+  }
+  movimentacoes: PaginationResponse<AccountMovementResponse>
+  totalMovimentacoes: number
+}
+
 // ============================================================================
 // TIPOS PARA FORMULÁRIOS
 // ============================================================================

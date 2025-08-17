@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +26,14 @@ import { AccountService } from '@/services/accountService'
  */
 export function MovementsPage() {
   const { agencia, contaCorrente } = useParams<{ agencia: string; contaCorrente: string }>()
+  const [searchParams] = useSearchParams()
+
+  // Extrair parâmetros de período da URL
+  const mes = searchParams.get('mes')
+  const ano = searchParams.get('ano')
+  const dataInicio = searchParams.get('dataInicio')
+  const dataFim = searchParams.get('dataFim')
+  const importId = searchParams.get('importId') // Novo parâmetro para filtrar por importação
 
   const [movements, setMovements] = useState<AccountMovementResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,24 +53,41 @@ export function MovementsPage() {
     setError(null)
 
     try {
-      console.log('🔄 Buscando movimentações para:', { agencia, contaCorrente, pagination })
+      console.log('🔄 Buscando movimentações para:', { agencia, contaCorrente, pagination, mes, ano, dataInicio, dataFim, importId })
       
-      const params = {
+      const params: any = {
         agencia,
         contaCorrente,
         page: pagination.currentPage,
         size: pagination.pageSize
       }
 
+      // Adicionar parâmetros de período se existirem
+      if (mes && ano) {
+        params.mes = parseInt(mes)
+        params.ano = parseInt(ano)
+      } else if (dataInicio && dataFim) {
+        params.dataInicio = dataInicio
+        params.dataFim = dataFim
+      }
+
       const data = await AccountService.getMovements(agencia, contaCorrente, params)
       
       console.log('✅ Resposta da API de movimentações:', data)
       
-      setMovements(data.content)
+      let filteredMovements = data.content
+      
+      // Filtrar por importId se especificado
+      if (importId) {
+        filteredMovements = data.content.filter(movement => movement.importId === parseInt(importId))
+        console.log('🔍 Movimentos filtrados por importId:', importId, 'Total:', filteredMovements.length)
+      }
+      
+      setMovements(filteredMovements)
       setPagination(prev => ({
         ...prev,
         totalPages: data.totalPages,
-        totalElements: data.totalElements
+        totalElements: importId ? filteredMovements.length : data.totalElements
       }))
     } catch (err) {
       console.error('❌ Erro ao buscar movimentações:', err)
@@ -93,7 +118,7 @@ export function MovementsPage() {
   // Carregar dados iniciais
   useEffect(() => {
     fetchMovements()
-  }, [agencia, contaCorrente, pagination.currentPage, pagination.pageSize])
+  }, [agencia, contaCorrente, pagination.currentPage, pagination.pageSize, mes, ano, dataInicio, dataFim, importId])
 
   // Mudar página
   const changePage = (newPage: number) => {
@@ -135,7 +160,21 @@ export function MovementsPage() {
   // Gerar breadcrumbs
   const breadcrumbs = [
     { label: 'Contas', href: '/accounts' },
-    { label: `${agencia}/${contaCorrente}`, href: `/accounts/${agencia}/${contaCorrente}` },
+    { 
+      label: `${agencia}/${contaCorrente}`, 
+      href: (() => {
+        const baseUrl = `/accounts/${agencia}/${contaCorrente}`
+        const params = new URLSearchParams()
+        
+        if (mes) params.set('mes', mes)
+        if (ano) params.set('ano', ano)
+        if (dataInicio) params.set('dataInicio', dataInicio)
+        if (dataFim) params.set('dataFim', dataFim)
+        
+        const queryString = params.toString()
+        return queryString ? `${baseUrl}?${queryString}` : baseUrl
+      })()
+    },
     { label: 'Movimentações', href: `/accounts/${agencia}/${contaCorrente}/movements` }
   ]
 
@@ -160,6 +199,11 @@ export function MovementsPage() {
         <h1 className="text-3xl font-bold tracking-tight">Movimentações</h1>
         <p className="text-muted-foreground">
           Histórico de transações financeiras para a conta {agencia}/{contaCorrente}
+          {importId && (
+            <span className="ml-2 text-blue-600 font-medium">
+              • Filtrado por Importação #{importId}
+            </span>
+          )}
         </p>
       </div>
 

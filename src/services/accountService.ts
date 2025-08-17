@@ -8,7 +8,8 @@ import type {
   AccountQueryLogResponse,
   AccountImportResponse,
   AccountMovementResponse,
-  AccountQueryParams
+  AccountQueryParams,
+  ImportWithMovementsResponse
 } from '@/types/rfc'
 
 import api from './api'
@@ -112,5 +113,59 @@ export class AccountService {
       `${API_BASE}/${agencia}/${contaCorrente}/movements?${queryParams.toString()}`
     )
     return response.data
+  }
+
+  /**
+   * Busca movimentações bancárias de uma importação específica
+   * Endpoint: GET /api/accounts/imports/{importId}
+   */
+  static async getMovementsByImport(
+    agencia: string, 
+    contaCorrente: string, 
+    importId: string | number, 
+    page: number = 0, 
+    size: number = 20
+  ): Promise<ImportWithMovementsResponse> {
+    const queryParams = new URLSearchParams()
+    
+    // Adicionar parâmetros de paginação
+    queryParams.append('page', page.toString())
+    queryParams.append('size', size.toString())
+    
+    const url = `/api/accounts/imports/${importId}?${queryParams.toString()}`
+    
+    console.log('🌐 Chamando endpoint:', {
+      method: 'GET',
+      url,
+      agencia,
+      contaCorrente,
+      importId,
+      page,
+      size
+    })
+    
+    try {
+      const response = await api.get(url)
+      
+      console.log('✅ Resposta do endpoint getMovementsByImport:', {
+        status: response.status,
+        statusText: response.statusText,
+        dataKeys: Object.keys(response.data || {}),
+        importacao: response.data?.importacao,
+        totalMovimentacoes: response.data?.totalMovimentacoes,
+        movimentacoesLength: response.data?.movimentacoes?.content?.length || 0
+      })
+      
+      return response.data
+    } catch (error) {
+      console.error('❌ Erro no endpoint getMovementsByImport:', {
+        url,
+        error: error instanceof Error ? error.message : error,
+        agencia,
+        contaCorrente,
+        importId
+      })
+      throw error
+    }
   }
 }

@@ -10,14 +10,8 @@ import {
   Download, 
   TrendingUp,
   AlertCircle,
-  Database,
   Banknote,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Activity,
-  BarChart3,
-  Shield
+  Activity
 } from 'lucide-react'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -94,24 +88,18 @@ export function AccountDetailsPage() {
     return queryString ? `${baseUrl}?${queryString}` : baseUrl
   }
 
-  // Calcular estatísticas
-  const getEstatisticas = () => {
-    const totalConsultas = queryLogs?.totalElements || 0
-    const totalImportacoes = imports?.totalElements || 0
-    const totalMovimentacoes = movements?.totalElements || 0
+  // Gerar URL para detalhes da conta com parâmetros preservados
+  const generateAccountDetailsUrl = () => {
+    const baseUrl = `/accounts/${agencia}/${contaCorrente}`
+    const params = new URLSearchParams()
     
-    const consultasSucesso = queryLogs?.content?.filter(log => log.erroCodigo === 0).length || 0
-    const consultasErro = totalConsultas - consultasSucesso
-    const taxaSucesso = totalConsultas > 0 ? (consultasSucesso / totalConsultas * 100).toFixed(1) : 0
+    if (mes) params.set('mes', mes)
+    if (ano) params.set('ano', ano)
+    if (dataInicio) params.set('dataInicio', dataInicio)
+    if (dataFim) params.set('dataFim', dataFim)
     
-    return {
-      totalConsultas,
-      totalImportacoes,
-      totalMovimentacoes,
-      consultasSucesso,
-      consultasErro,
-      taxaSucesso
-    }
+    const queryString = params.toString()
+    return queryString ? `${baseUrl}?${queryString}` : baseUrl
   }
 
   if (!agencia || !contaCorrente) {
@@ -125,14 +113,25 @@ export function AccountDetailsPage() {
     )
   }
 
-  const stats = getEstatisticas()
-
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
       <Breadcrumbs items={[
-        { label: 'Contas', href: '/accounts' },
-        { label: `${agencia}/${contaCorrente}`, href: `/accounts/${agencia}/${contaCorrente}` }
+        { 
+          label: 'Contas', 
+          href: (() => {
+            const params = new URLSearchParams()
+            if (agencia) params.set('agencia', agencia)
+            if (contaCorrente) params.set('contaCorrente', contaCorrente)
+            if (mes) params.set('mes', mes)
+            if (ano) params.set('ano', ano)
+            if (dataInicio) params.set('dataInicio', dataInicio)
+            if (dataFim) params.set('dataFim', dataFim)
+            const queryString = params.toString()
+            return queryString ? `/accounts?${queryString}` : '/accounts'
+          })()
+        },
+        { label: `${agencia}/${contaCorrente}`, href: generateAccountDetailsUrl() }
       ]} />
 
       {/* Cabeçalho */}
@@ -142,94 +141,6 @@ export function AccountDetailsPage() {
           Informações e histórico da conta {agencia}/{contaCorrente}
           {mes || dataInicio ? ` • Período: ${getPeriodoConsulta()}` : ''}
         </p>
-      </div>
-
-      {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total de Consultas */}
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center justify-between text-lg">
-              <span>Consultas</span>
-              <Database className="h-5 w-5 text-blue-600" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-700 mb-2">
-              {loading ? '...' : stats.totalConsultas.toLocaleString('pt-BR')}
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-blue-600">
-                <CheckCircle className="h-4 w-4 inline mr-1" />
-                {stats.consultasSucesso} sucesso
-              </span>
-              <span className="text-red-600">
-                <XCircle className="h-4 w-4 inline mr-1" />
-                {stats.consultasErro} erro
-              </span>
-            </div>
-            <div className="mt-2 text-xs text-blue-600">
-              Taxa de sucesso: {stats.taxaSucesso}%
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total de Importações */}
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center justify-between text-lg">
-              <span>Importações</span>
-              <Download className="h-5 w-5 text-green-600" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-700 mb-2">
-              {loading ? '...' : stats.totalImportacoes.toLocaleString('pt-BR')}
-            </div>
-            <div className="text-sm text-green-600">
-              <Activity className="h-4 w-4 inline mr-1" />
-              Arquivos processados
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total de Movimentações */}
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center justify-between text-lg">
-              <span>Movimentações</span>
-              <TrendingUp className="h-5 w-5 text-purple-600" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-700 mb-2">
-              {loading ? '...' : stats.totalMovimentacoes.toLocaleString('pt-BR')}
-            </div>
-            <div className="text-sm text-purple-600">
-              <BarChart3 className="h-4 w-4 inline mr-1" />
-              Transações financeiras
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Status da Conta */}
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center justify-between text-lg">
-              <span>Status</span>
-              <Shield className="h-5 w-5 text-orange-600" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-700 mb-2">
-              Ativa
-            </div>
-            <div className="text-sm text-orange-600">
-              <Clock className="h-4 w-4 inline mr-1" />
-              Última atualização: Hoje
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Informações da Conta */}
@@ -291,7 +202,7 @@ export function AccountDetailsPage() {
                     Histórico detalhado de tentativas de consulta
                   </p>
                   <Badge variant="secondary" className="bg-blue-200 text-blue-800">
-                    {stats.totalConsultas} registros
+                    {queryLogs?.totalElements || 0} registros
                   </Badge>
                 </CardContent>
               </Card>
@@ -306,7 +217,7 @@ export function AccountDetailsPage() {
                     Histórico de arquivos processados e importados
                   </p>
                   <Badge variant="secondary" className="bg-green-200 text-green-800">
-                    {stats.totalImportacoes} arquivos
+                    {imports?.totalElements || 0} arquivos
                   </Badge>
                 </CardContent>
               </Card>
@@ -321,7 +232,7 @@ export function AccountDetailsPage() {
                     Histórico de transações financeiras da conta
                   </p>
                   <Badge variant="secondary" className="bg-purple-200 text-purple-800">
-                    {stats.totalMovimentacoes} transações
+                    {movements?.totalElements || 0} transações
                   </Badge>
                 </CardContent>
               </Card>

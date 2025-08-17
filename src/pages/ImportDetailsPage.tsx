@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,18 +8,18 @@ import {
   AlertCircle, 
   FileText, 
   ArrowLeft,
-  Calendar,
-  Database,
-  Clock,
   Building,
-  FileArchive
+  FileArchive,
+  TrendingUp,
+  DollarSign
 } from 'lucide-react'
-import type { AccountImportResponse } from '@/types/rfc'
+import type { AccountImportResponse, AccountMovementResponse, ImportWithMovementsResponse } from '@/types/rfc'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
+import { AccountService } from '@/services/accountService'
 
 /**
  * ImportDetailsPage - Página de detalhes de uma importação específica
- * Exibe informações detalhadas da importação selecionada
+ * Exibe informações detalhadas da importação selecionada e lista de movimentos
  */
 export function ImportDetailsPage() {
   const { agencia, contaCorrente, importId } = useParams<{ 
@@ -28,56 +28,87 @@ export function ImportDetailsPage() {
     importId: string 
   }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   
   const [importData, setImportData] = useState<AccountImportResponse | null>(null)
+  const [movements, setMovements] = useState<AccountMovementResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMovements, setLoadingMovements] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Carregar detalhes da importação
-  const fetchImportDetails = async () => {
+  // Extrair parâmetros da URL
+  const mes = searchParams.get('mes')
+  const ano = searchParams.get('ano')
+  const dataInicio = searchParams.get('dataInicio')
+  const dataFim = searchParams.get('dataFim')
+
+  // Carregar dados da importação com movimentações
+  const fetchImportData = async () => {
     if (!agencia || !contaCorrente || !importId) return
 
     setLoading(true)
     setError(null)
 
     try {
-      console.log('🔄 Buscando detalhes da importação:', { agencia, contaCorrente, importId })
+      console.log('🔄 Buscando dados da importação:', { 
+        agencia, 
+        contaCorrente, 
+        importId,
+        url: `/api/accounts/imports/${importId}`
+      })
       
-      // Por enquanto, vamos simular os dados da importação
-      // Em uma implementação real, isso viria de um endpoint específico
-      const mockImportData: AccountImportResponse = {
-        id: parseInt(importId),
-        layoutId: 2,
-        documentId: null,
-        bancoOrigem: 'BB',
-        arquivoNome: 'IMPORTED WITH API',
-        arquivoGeracaoDataHora: '2025-08-16T18:20:55.000Z',
-        arquivoNumeroSequencial: 1,
-        arquivoNumeroVersaoLayOut: '2.0',
-        qtdLotes: 1,
-        qtdRegistros: 29,
-        qtdContas: 1,
-        dataHora: '2025-08-16T18:20:55.000Z',
-        userId: 1,
-        consultaAgencia: agencia,
-        consultaContaCorrente: contaCorrente,
-        consultaPeriodoDe: '2025-05-25T00:00:00.000Z',
-        consultaPeriodoAte: '2025-06-23T23:59:59.000Z'
+      // Usar o novo endpoint que retorna importação com movimentações
+      const data: ImportWithMovementsResponse = await AccountService.getMovementsByImport(agencia, contaCorrente, importId, 0, 100)
+      
+      console.log('✅ Resposta da API da importação:', {
+        importacao: data.importacao,
+        totalMovimentacoes: data.totalMovimentacoes,
+        movimentacoes: {
+          totalElements: data.movimentacoes.totalElements,
+          totalPages: data.movimentacoes.totalPages,
+          contentLength: data.movimentacoes.content?.length || 0
+        }
+      })
+      
+      // Definir dados da importação
+      if (data.importacao) {
+        setImportData(data.importacao)
+      } else {
+        setError('Dados da importação não encontrados na API')
+        return
       }
       
-      setImportData(mockImportData)
-      console.log('✅ Dados da importação carregados:', mockImportData)
+      // Definir movimentações
+      if (data.movimentacoes.content && Array.isArray(data.movimentacoes.content)) {
+        setMovements(data.movimentacoes.content)
+        console.log(`📊 Movimentos carregados: ${data.movimentacoes.content.length} registros`)
+      } else {
+        console.warn('⚠️ Resposta da API não contém array de movimentos:', data.movimentacoes)
+        setMovements([])
+      }
     } catch (err) {
-      console.error('❌ Erro ao buscar detalhes da importação:', err)
-      setError('Erro ao carregar detalhes da importação')
+      console.error('❌ Erro ao buscar dados da importação:', err)
+      
+      // Log detalhado do erro
+      if (err instanceof Error) {
+        console.error('❌ Detalhes do erro:', {
+          message: err.message,
+          name: err.name,
+          stack: err.stack
+        })
+      }
+      
+      setError('Erro ao carregar dados da importação')
+      setMovements([])
     } finally {
       setLoading(false)
+      setLoadingMovements(false)
     }
   }
 
   // Carregar dados iniciais
   useEffect(() => {
-    fetchImportDetails()
+    fetchImportData()
   }, [agencia, contaCorrente, importId])
 
   // Funções de formatação
@@ -93,16 +124,58 @@ export function ImportDetailsPage() {
     return `${dataDe} a ${dataAte}`
   }
 
-  const formatNumber = (num: number | null | undefined): string => {
-    if (num === null || num === undefined || isNaN(num)) return 'N/A'
-    return num.toLocaleString('pt-BR')
+  // Funções de formatação para movimentos
+  const formatCurrency = (value: number | null | undefined): string => {
+    if (value === null || value === undefined || isNaN(value)) return 'R$ 0,00'
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value)
+  }
+
+  const getMovementTypeColor = (tipo: string | null): string => {
+    if (!tipo) return 'bg-gray-100 text-gray-800'
+    return tipo === 'C' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+  }
+
+  const getMovementTypeLabel = (tipo: string | null): string => {
+    if (!tipo) return 'N/A'
+    return tipo === 'C' ? 'CRÉDITO' : 'DÉBITO'
   }
 
   // Gerar breadcrumbs
   const breadcrumbs = [
     { label: 'Contas', href: '/accounts' },
-    { label: `${agencia}/${contaCorrente}`, href: `/accounts/${agencia}/${contaCorrente}` },
-    { label: 'Importações', href: `/accounts/${agencia}/${contaCorrente}/imports` },
+    { 
+      label: `${agencia}/${contaCorrente}`, 
+      href: (() => {
+        const baseUrl = `/accounts/${agencia}/${contaCorrente}`
+        const params = new URLSearchParams()
+        
+        if (mes) params.set('mes', mes)
+        if (ano) params.set('ano', ano)
+        if (dataInicio) params.set('dataInicio', dataInicio)
+        if (dataFim) params.set('dataFim', dataFim)
+        
+        const queryString = params.toString()
+        return queryString ? `${baseUrl}?${queryString}` : baseUrl
+      })()
+    },
+    { 
+      label: 'Importações', 
+      href: (() => {
+        const baseUrl = `/accounts/${agencia}/${contaCorrente}/imports`
+        const params = new URLSearchParams()
+        
+        if (mes) params.set('mes', mes)
+        if (ano) params.set('ano', ano)
+        if (dataInicio) params.set('dataInicio', dataInicio)
+        if (dataFim) params.set('dataFim', dataFim)
+        
+        const queryString = params.toString()
+        return queryString ? `${baseUrl}?${queryString}` : baseUrl
+      })()
+    },
     { label: `Importação #${importId}`, href: `/accounts/${agencia}/${contaCorrente}/imports/${importId}` }
   ]
 
@@ -130,15 +203,6 @@ export function ImportDetailsPage() {
             Informações detalhadas da importação #{importId} para a conta {agencia}/{contaCorrente}
           </p>
         </div>
-        
-        <Button 
-          variant="outline" 
-          onClick={() => navigate(`/accounts/${agencia}/${contaCorrente}/imports`)}
-          className="flex items-center space-x-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Voltar à Lista</span>
-        </Button>
       </div>
 
       {loading ? (
@@ -148,7 +212,7 @@ export function ImportDetailsPage() {
           <CardContent className="p-6 text-center">
             <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-4" />
             <p className="text-red-700 mb-4">{error}</p>
-            <Button onClick={fetchImportDetails}>Tentar Novamente</Button>
+            <Button onClick={fetchImportData}>Tentar Novamente</Button>
           </CardContent>
         </Card>
       ) : importData ? (
@@ -169,12 +233,6 @@ export function ImportDetailsPage() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="text-sm">
-                    Layout {importData.layoutId || 'N/A'}
-                  </Badge>
-                  <Badge variant="outline" className="text-sm">
-                    {importData.bancoOrigem || 'N/A'}
-                  </Badge>
                 </div>
               </div>
             </CardHeader>
@@ -182,120 +240,105 @@ export function ImportDetailsPage() {
 
           {/* Grid de Informações */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Informações do Arquivo */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <FileText className="h-5 w-5 mr-2" />
-                  Informações do Arquivo
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm text-muted-foreground">Nome do Arquivo:</span>
-                    <div className="font-medium">{importData.arquivoNome || 'N/A'}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">Versão do Layout:</span>
-                    <div className="font-medium">{importData.arquivoNumeroVersaoLayOut || 'N/A'}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">Número Sequencial:</span>
-                    <div className="font-medium">{importData.arquivoNumeroSequencial || 'N/A'}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">ID do Documento:</span>
-                    <div className="font-medium">{importData.documentId || 'N/A'}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Estatísticas de Processamento */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Database className="h-5 w-5 mr-2" />
-                  Estatísticas de Processamento
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">
-                      {formatNumber(importData.qtdRegistros)}
-                    </div>
-                    <div className="text-sm text-green-700">Registros</div>
-                  </div>
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {formatNumber(importData.qtdContas)}
-                    </div>
-                    <div className="text-sm text-blue-700">Contas</div>
-                  </div>
-                  <div className="text-center p-3 bg-purple-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {formatNumber(importData.qtdLotes)}
-                    </div>
-                    <div className="text-sm text-purple-700">Lotes</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Período de Consulta */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Calendar className="h-5 w-5 mr-2" />
-                  Período de Consulta
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <div className="text-center">
-                    <div className="text-lg font-medium text-blue-800">
-                      {formatPeriodo(importData.consultaPeriodoDe, importData.consultaPeriodoAte)}
-                    </div>
-                    <div className="text-sm text-blue-600 mt-1">
-                      Período processado
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Informações de Sistema */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Clock className="h-5 w-5 mr-2" />
-                  Informações de Sistema
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Data de Geração:</span>
-                    <span className="font-medium">{formatDateTime(importData.arquivoGeracaoDataHora)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Data de Processamento:</span>
-                    <span className="font-medium">{formatDateTime(importData.dataHora)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Usuário ID:</span>
-                    <span className="font-medium">{importData.userId || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Banco de Origem:</span>
-                    <span className="font-medium">{importData.bancoOrigem || 'N/A'}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
+
+          {/* Lista de Movimentos da Importação */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2" />
+                Movimentos da Importação
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Transações financeiras processadas nesta importação
+              </p>
+            </CardHeader>
+            <CardContent>
+              {loadingMovements ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-sm text-muted-foreground mt-2">Carregando movimentos...</p>
+                </div>
+              ) : movements.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="mb-2">Nenhum movimento encontrado para esta importação</p>
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p>Importação ID: {importId}</p>
+                    <p>Registros esperados: {importData?.qtdRegistros || 'N/A'}</p>
+                    <p>Período da importação: {formatPeriodo(importData?.consultaPeriodoDe, importData?.consultaPeriodoAte)}</p>
+                    <p>Filtro aplicado: {mes && ano ? `Mês ${mes}/${ano}` : 'Período específico'}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="text-sm text-muted-foreground mb-4">
+                    Total: {movements.length} movimento(s)
+                  </div>
+                  {movements.map((movement) => (
+                    <div key={movement.id} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          <DollarSign className="h-5 w-5 text-blue-500" />
+                          <span className="font-medium">ID: {movement.id}</span>
+                          <Badge 
+                            variant="secondary" 
+                            className={getMovementTypeColor(movement.movimentoTipo)}
+                          >
+                            {getMovementTypeLabel(movement.movimentoTipo)}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatDateTime(movement.movimentoData)}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-3">
+                        <div>
+                          <span className="text-muted-foreground">Valor:</span>
+                          <div className="font-medium text-lg">
+                            {formatCurrency(movement.movimentoValor)}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <span className="text-muted-foreground">Documento:</span>
+                          <div className="font-medium flex items-center space-x-2">
+                            <FileText className="h-4 w-4" />
+                            <span>{movement.documentoNumero || 'N/A'}</span>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <span className="text-muted-foreground">Sequencial:</span>
+                          <div className="font-medium">{movement.numeroSequencialExtrato || 'N/A'}</div>
+                        </div>
+                        
+                        <div>
+                          <span className="text-muted-foreground">Saldo:</span>
+                          <div className="font-medium">
+                            {formatCurrency(movement.movimentoSaldo)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Descrição:</span>
+                          <div className="font-medium">{movement.descricaoHistorico || 'N/A'}</div>
+                        </div>
+                        
+                        <div>
+                          <span className="text-muted-foreground">Categoria:</span>
+                          <div className="font-medium">{movement.movimentoCategoria || 'N/A'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Ações */}
           <Card>
@@ -306,14 +349,46 @@ export function ImportDetailsPage() {
               <div className="flex space-x-4">
                 <Button 
                   variant="outline"
-                  onClick={() => navigate(`/accounts/${agencia}/${contaCorrente}/imports`)}
+                  onClick={() => {
+                    // Preservar parâmetros de período ao voltar à lista
+                    let returnUrl = `/accounts/${agencia}/${contaCorrente}/imports`
+                    const params = new URLSearchParams()
+                    
+                    if (mes) params.set('mes', mes)
+                    if (ano) params.set('ano', ano)
+                    if (dataInicio) params.set('dataInicio', dataInicio)
+                    if (dataFim) params.set('dataFim', dataFim)
+                    
+                    const queryString = params.toString()
+                    if (queryString) {
+                      returnUrl += `?${queryString}`
+                    }
+                    
+                    navigate(returnUrl)
+                  }}
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Voltar à Lista
                 </Button>
                 <Button 
                   variant="outline"
-                  onClick={() => navigate(`/accounts/${agencia}/${contaCorrente}`)}
+                  onClick={() => {
+                    // Preservar parâmetros de período ao ver conta
+                    let returnUrl = `/accounts/${agencia}/${contaCorrente}`
+                    const params = new URLSearchParams()
+                    
+                    if (mes) params.set('mes', mes)
+                    if (ano) params.set('ano', ano)
+                    if (dataInicio) params.set('dataInicio', dataInicio)
+                    if (dataFim) params.set('dataFim', dataFim)
+                    
+                    const queryString = params.toString()
+                    if (queryString) {
+                      returnUrl += `?${queryString}`
+                    }
+                    
+                    navigate(returnUrl)
+                  }}
                 >
                   <Building className="h-4 w-4 mr-2" />
                   Ver Conta

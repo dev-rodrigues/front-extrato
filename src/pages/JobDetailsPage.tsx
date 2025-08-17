@@ -17,6 +17,7 @@ import {
 import { useSchedule } from '@/hooks/useSchedule'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
 import type { JobProgressResponse } from '@/types/rfc'
+import { ScheduleService } from '@/services/scheduleService'
 
 /**
  * JobDetailsPage - Implementa EXATAMENTE o que está documentado nos RFCs
@@ -42,24 +43,9 @@ export function JobDetailsPage() {
         setLoading(true)
         setError(null)
         
-        // Simular busca dos detalhes do job
-        // Em produção, isso viria do ScheduleService.getJobDetails(jobName)
-        const mockJobDetails: JobProgressResponse = {
-          jobName,
-          status: 'RUNNING',
-          statusDescription: 'Em execução',
-          startTime: new Date().toISOString(),
-          endTime: null,
-          durationMs: 45000,
-          recordsProcessed: 1250,
-          accountsProcessed: 45,
-          progressPercentage: 75,
-          errorMessage: null,
-          estimatedTimeRemaining: 15000,
-          lastUpdated: new Date().toISOString()
-        }
-        
-        setJobDetails(mockJobDetails)
+              // Buscar dados reais da API
+      const data = await ScheduleService.getJobDetails(jobName)
+      setJobDetails(data)
       } catch (err) {
         console.error('Erro ao buscar detalhes do job:', err)
         setError('Erro ao carregar detalhes do job')
