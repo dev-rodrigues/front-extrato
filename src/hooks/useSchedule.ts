@@ -1,148 +1,129 @@
 /**
- * Hook customizado para schedule - Implementa APENAS funcionalidades documentadas nos RFCs
+ * Hook customizado para schedule com React Query - Implementa APENAS funcionalidades documentadas nos RFCs
  * Baseado em RFC-API-Integration.md e RFC-Frontend-Interface.md
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ScheduleService } from '@/services/scheduleService'
-import type { 
-  JobProgressSummaryResponse, 
-  SystemStatsResponse, 
-  HealthResponse,
-  JobProgressResponse 
-} from '@/types/rfc'
 
 /**
- * Hook para monitoramento de schedule conforme RFCs
+ * Hook para monitoramento de schedule com React Query conforme RFCs
  * Funcionalidades implementadas:
- * - Busca progresso geral dos jobs
- * - Busca estatísticas do sistema
- * - Busca status de saúde
- * - Lista jobs ativos
- * - Cancelamento de jobs
+ * - Busca progresso geral dos jobs com atualizações automáticas
+ * - Busca estatísticas do sistema com cache inteligente
+ * - Busca status de saúde com refresh automático
+ * - Lista jobs ativos com atualizações em tempo real
+ * - Cancelamento de jobs com invalidação de cache
  */
 export function useSchedule() {
-  const [progress, setProgress] = useState<JobProgressSummaryResponse | null>(null)
-  const [stats, setStats] = useState<SystemStatsResponse | null>(null)
-  const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [activeJobs, setActiveJobs] = useState<JobProgressResponse[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
-  // Buscar progresso geral
-  const fetchProgress = useCallback(async () => {
+  // Query para progresso geral - atualiza a cada 15 segundos (otimizado de 30s)
+  const progressQuery = useQuery({
+    queryKey: ['schedule', 'progress'],
+    queryFn: ScheduleService.getProgress,
+    refetchInterval: 15000, // 15 segundos (otimizado)
+    staleTime: 8000, // 8 segundos (otimizado)
+  })
+
+  // Query para estatísticas do sistema - atualiza a cada 30 segundos (otimizado de 60s)
+  const statsQuery = useQuery({
+    queryKey: ['schedule', 'stats'],
+    queryFn: ScheduleService.getStats,
+    refetchInterval: 30000, // 30 segundos (otimizado)
+    staleTime: 15000, // 15 segundos (otimizado)
+  })
+
+  // Query para saúde do sistema - atualiza a cada 25 segundos (otimizado de 45s)
+  const healthQuery = useQuery({
+    queryKey: ['schedule', 'health'],
+    queryFn: ScheduleService.getHealth,
+    refetchInterval: 25000, // 25 segundos (otimizado)
+    staleTime: 12000, // 12 segundos (otimizado)
+  })
+
+  // Query para jobs ativos - atualiza a cada 5 segundos (otimizado de 10s)
+  const activeJobsQuery = useQuery({
+    queryKey: ['schedule', 'activeJobs'],
+    queryFn: ScheduleService.getActiveJobs,
+    refetchInterval: 5000, // 5 segundos (otimizado)
+    staleTime: 3000, // 3 segundos (otimizado)
+  })
+
+  // Mutation para cancelar job
+  const cancelJobMutation = useMutation({
+    mutationFn: ScheduleService.cancelJob,
+    onSuccess: () => {
+      // Invalida e refetch das queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['schedule', 'progress'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule', 'activeJobs'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule', 'stats'] })
+    },
+  })
+
+  // Função para cancelar job
+  const cancelJob = async (jobName: string) => {
     try {
-      setLoading(true)
-      setError(null)
-      const data = await ScheduleService.getProgress()
-      setProgress(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao buscar progresso')
-    } finally {
-      setLoading(false)
+      await cancelJobMutation.mutateAsync(jobName)
+    } catch (error) {
+      // Erro será tratado pelo componente que usa o hook
+      throw error
     }
-  }, [])
+  }
 
-  // Buscar estatísticas
-  const fetchStats = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await ScheduleService.getStats()
-      setStats(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao buscar estatísticas')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // Função para refresh manual de todos os dados
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['schedule'] })
+  }
 
-  // Buscar saúde do sistema
-  const fetchHealth = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await ScheduleService.getHealth()
-      setHealth(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao verificar saúde')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // Estados consolidados
+  const isLoading = progressQuery.isLoading || statsQuery.isLoading || healthQuery.isLoading || activeJobsQuery.isLoading
+  const isRefetching = progressQuery.isRefetching || statsQuery.isRefetching || healthQuery.isRefetching || activeJobsQuery.isRefetching
 
-  // Buscar jobs ativos
-  const fetchActiveJobs = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await ScheduleService.getActiveJobs()
-      setActiveJobs(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao buscar jobs ativos')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  // Cancelar job
-  const cancelJob = useCallback(async (jobName: string) => {
-    try {
-      setLoading(true)
-      setError(null)
-      await ScheduleService.cancelJob(jobName)
-      // Recarregar dados após cancelamento
-      await Promise.all([fetchProgress(), fetchActiveJobs()])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao cancelar job')
-    } finally {
-      setLoading(false)
-    }
-  }, [fetchProgress, fetchActiveJobs])
-
-  // Buscar todos os dados
-  const fetchAllData = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      await Promise.all([
-        fetchProgress(),
-        fetchStats(),
-        fetchHealth(),
-        fetchActiveJobs()
-      ])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar dados')
-    } finally {
-      setLoading(false)
-    }
-  }, [fetchProgress, fetchStats, fetchHealth, fetchActiveJobs])
-
-  // Carregar dados iniciais
-  useEffect(() => {
-    fetchAllData()
-  }, [fetchAllData])
+  // Função para obter mensagem de erro mais relevante
+  const getErrorMessage = (): string | null => {
+    if (progressQuery.error) return progressQuery.error.message
+    if (statsQuery.error) return statsQuery.error.message
+    if (healthQuery.error) return healthQuery.error.message
+    if (activeJobsQuery.error) return activeJobsQuery.error.message
+    return null
+  }
 
   return {
-    // Dados
-    progress,
-    stats,
-    health,
-    activeJobs,
+    // Dados das queries
+    progress: progressQuery.data || null,
+    stats: statsQuery.data || null,
+    health: healthQuery.data || null,
+    activeJobs: activeJobsQuery.data || [],
     
-    // Estados
-    loading,
-    error,
+    // Estados consolidados
+    loading: isLoading,
+    refetching: isRefetching,
+    error: getErrorMessage(),
+    
+    // Estados individuais para controle granular
+    progressLoading: progressQuery.isLoading,
+    statsLoading: statsQuery.isLoading,
+    healthLoading: healthQuery.isLoading,
+    activeJobsLoading: activeJobsQuery.isLoading,
+    
+    // Estados de refetch para indicadores visuais
+    progressRefetching: progressQuery.isRefetching,
+    statsRefetching: statsQuery.isRefetching,
+    healthRefetching: healthQuery.isRefetching,
+    activeJobsRefetching: activeJobsQuery.isRefetching,
     
     // Ações
-    fetchProgress,
-    fetchStats,
-    fetchHealth,
-    fetchActiveJobs,
     cancelJob,
-    fetchAllData,
+    refresh,
     
-    // Utilitários
-    refresh: fetchAllData
+    // Mutations para controle de estado
+    cancelJobMutation,
+    
+    // Queries individuais para controle avançado
+    progressQuery,
+    statsQuery,
+    healthQuery,
+    activeJobsQuery,
   }
 }

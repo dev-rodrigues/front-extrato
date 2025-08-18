@@ -4,8 +4,8 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
-    base: '/front-extrato/',
     plugins: [react()],
+    base: '/front-extrato/',
     test: {
         globals: true,
         environment: 'jsdom',

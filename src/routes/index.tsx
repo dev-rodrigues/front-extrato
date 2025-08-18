@@ -108,7 +108,9 @@ export const router = createBrowserRouter([
       },
     ],
   },
-])
+], {
+  basename: "/front-extrato/"
+})
 
 /**
  * Estrutura de navegação conforme RFCs

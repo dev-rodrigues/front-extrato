@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AppLoading } from '@/components/ui/AppLoading'
+import { AppLoading, AppLoadingSkeleton, UpdateIndicator, ProgressUpdateIndicator } from '@/components/ui/AppLoading'
 import { 
   Play, 
   Square, 
@@ -13,13 +13,15 @@ import {
   CheckCircle,
   XCircle,
   Activity,
-  Eye
+  Eye,
+  RefreshCw
 } from 'lucide-react'
 import { useSchedule } from '@/hooks/useSchedule'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
 
 /**
  * Schedule Page - Implementa EXATAMENTE o que está documentado nos RFCs
+ * Agora com React Query para atualizações automáticas e feedback visual aprimorado
  * Endpoints utilizados:
  * - GET /api/schedule/active - Jobs ativos
  * - GET /api/schedule/progress - Progresso geral
@@ -30,21 +32,20 @@ export function SchedulePage() {
     activeJobs, 
     progress: progressSummary, 
     loading, 
+    refetching,
     error, 
     cancelJob, 
-    refresh: fetchScheduleData 
+    refresh,
+    // Estados individuais para controle granular
+    activeJobsLoading,
+    // Estados de refetch para indicadores visuais
+    activeJobsRefetching,
+    // Mutation para cancelar job
+    cancelJobMutation
   } = useSchedule()
   
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [periodFilter, setPeriodFilter] = useState<string>('24h')
-
-
-
-  // Atualização automática a cada 10 segundos conforme RFCs
-  useEffect(() => {
-    const interval = setInterval(fetchScheduleData, 10000)
-    return () => clearInterval(interval)
-  }, [fetchScheduleData])
 
   // Função para formatar tempo em milissegundos
   const formatDuration = (ms: number | undefined | null): string => {
@@ -103,17 +104,19 @@ export function SchedulePage() {
     return true
   })
 
+  // Loading inicial
   if (loading) {
     return <AppLoading />
   }
 
+  // Erro
   if (error) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
           <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={fetchScheduleData}>Tentar Novamente</Button>
+          <Button onClick={refresh}>Tentar Novamente</Button>
         </div>
       </div>
     )
@@ -124,16 +127,41 @@ export function SchedulePage() {
       {/* Breadcrumb */}
       <Breadcrumbs items={[{ label: 'Schedule', href: '/schedule' }]} />
       
-      {/* Cabeçalho */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Monitoramento de Schedule</h1>
-        <p className="text-muted-foreground">
-          Acompanhe o status e progresso dos jobs em execução
-        </p>
+      {/* Cabeçalho com indicador de atualização */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Monitoramento de Schedule</h1>
+          <p className="text-muted-foreground">
+            Acompanhe o status e progresso dos jobs em execução
+          </p>
+        </div>
+        
+        {/* Indicador de atualização automática com GiKiwiBird */}
+        <div className="flex items-center space-x-3">
+          {/* UpdateIndicator personalizado */}
+          <UpdateIndicator 
+            size="md" 
+            isRefetching={refetching} 
+            showText={true}
+          />
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={refresh}
+            disabled={refetching}
+            className="transition-all duration-300"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 transition-all duration-300 ${
+              refetching ? 'animate-spin' : ''
+            }`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}
-      <Card>
+      <Card className="transition-all duration-300 animate-fade-in">
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
@@ -169,30 +197,43 @@ export function SchedulePage() {
                 </SelectContent>
               </Select>
             </div>
-
-            <Button onClick={fetchScheduleData} variant="outline">
-              Atualizar
-            </Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Jobs Ativos */}
-      <Card>
+      <Card className="transition-all duration-300 animate-fade-in">
         <CardHeader>
-          <CardTitle>Jobs Ativos</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            {filteredJobs.length} job(s) ativo(s) no momento
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Jobs Ativos</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {activeJobsLoading ? 'Carregando...' : `${filteredJobs.length} job(s) ativo(s) no momento`}
+              </p>
+            </div>
+            
+            {/* Indicador de refetching para jobs ativos */}
+            <UpdateIndicator 
+              size="sm" 
+              isRefetching={activeJobsRefetching} 
+              showText={true}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {filteredJobs.length === 0 ? (
+          {activeJobsLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <AppLoadingSkeleton key={i} isRefetching={activeJobsRefetching} />
+              ))}
+            </div>
+          ) : filteredJobs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Nenhum job ativo encontrado
             </div>
           ) : (
             filteredJobs.map((job) => (
-              <div key={job.jobName} className="border rounded-lg p-4">
+              <div key={job.jobName} className="border rounded-lg p-4 transition-all duration-300 hover:shadow-md">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
                     {getStatusIcon(job.status)}
@@ -215,30 +256,69 @@ export function SchedulePage() {
                         variant="destructive"
                         size="sm"
                         onClick={() => cancelJob(job.jobName)}
+                        disabled={cancelJobMutation.isPending}
+                        className="transition-all duration-300"
                       >
-                        <Square className="h-4 w-4 mr-1" />
-                        Cancelar
+                        {cancelJobMutation.isPending ? (
+                          <div className="flex items-center space-x-2">
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            <span>Cancelando...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Square className="h-4 w-4 mr-1" />
+                            Cancelar
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>
                 </div>
                 
-                <Progress value={job.progressPercentage || 0} className="mb-3" />
+                {/* Barra de progresso com loading state */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-muted-foreground">Progresso</span>
+                    <span className="text-sm font-medium">
+                      {job.progressPercentage || 0}%
+                    </span>
+                  </div>
+                  
+                  {/* Barra de progresso com loading iterativo */}
+                  <Progress 
+                    value={job.progressPercentage || 0} 
+                    className="mb-2"
+                    isLoading={activeJobsRefetching}
+                    isRefetching={activeJobsRefetching}
+                    showLoadingIndicator={true}
+                    showIterativeLoading={true}
+                  />
+                  
+                  {/* Indicador de atualização para a barra de progresso */}
+                  {activeJobsRefetching && (
+                    <ProgressUpdateIndicator isRefetching={activeJobsRefetching} />
+                  )}
+                </div>
                 
+                {/* Detalhes do job */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Início:</span>
-                    <div className="font-medium">{formatDateTime(job.startTime)}</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Duração:</span>
                     <div className="font-medium">
-                      {job.durationMs ? formatDuration(job.durationMs) : 'Calculando...'}
+                      {formatDateTime(job.startTime)}
                     </div>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Progresso:</span>
-                    <div className="font-medium">{job.progressPercentage || 0}%</div>
+                    <span className="text-muted-foreground">Registros:</span>
+                    <div className="font-medium">
+                      {job.recordsProcessed || 0}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Contas:</span>
+                    <div className="font-medium">
+                      {job.accountsProcessed || 0}
+                    </div>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Tempo Restante:</span>
@@ -250,31 +330,6 @@ export function SchedulePage() {
                     </div>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm mt-3">
-                  <div>
-                    <span className="text-muted-foreground">Registros Processados:</span>
-                    <div className="font-medium">{job.recordsProcessed || 0}</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Contas Processadas:</span>
-                    <div className="font-medium">{job.accountsProcessed || 0}</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Última Atualização:</span>
-                    <div className="font-medium">{formatDateTime(job.lastUpdated)}</div>
-                  </div>
-                </div>
-                
-                {job.errorMessage && (
-                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-                    <div className="flex items-center space-x-2 text-red-800">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="font-medium">Erro:</span>
-                    </div>
-                    <p className="text-red-700 mt-1">{job.errorMessage}</p>
-                  </div>
-                )}
               </div>
             ))
           )}
