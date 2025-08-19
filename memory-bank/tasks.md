@@ -36,29 +36,29 @@
 feature
 
 # Descrição
-Corrigir o sistema de versionamento automático do projeto e exibir a versão da aplicação na interface do usuário como uma etiqueta elegante abaixo da logo, mantendo a identidade visual minimalista e integrada ao design do projeto.
+Atualizar o projeto para a versão v1.3.1 (última versão da imagem Docker) e continuar o sistema de versionamento incremental a partir dessa numeração.
 
 # Contexto (arquivos/trechos)
-- docker-build.sh (script de build Docker)
-- package.json (versão do projeto)
-- src/components/layout/Header/Logo.tsx (componente da logo)
-- src/components/layout/Header/Header.tsx (header principal)
+- package.json (versão atual 1.0.0)
+- docker-build.sh (script de versionamento)
+- Dockerfile (build args de versão)
+- src/components/layout/Header/Logo.tsx (exibição da versão)
+- src/components/layout/Footer/Footer.tsx (exibição da versão)
 
 # Critérios de Aceite
-- [x] Corrigir docker-build.sh para gerar versão correta do projeto
-- [x] Atualizar versão em package.json automaticamente
-- [x] Exibir versão da aplicação ao lado da logo
-- [x] Manter identidade visual minimalista e clara
-- [x] Versão não deve quebrar o design existente
+- [x] Atualizar package.json para versão 1.3.1
+- [x] Verificar se script docker-build.sh incrementa corretamente a partir de 1.3.1
+- [x] Confirmar que versão é exibida corretamente na interface (header e footer)
+- [x] Testar sistema de versionamento incremental
+- [x] Manter consistência entre versão do projeto e imagem Docker
 
 # Plano (curto)
-1) Corrigir script docker-build.sh para versionamento correto
-2) Atualizar package.json com nova versão
-3) Modificar componente Logo para exibir versão
-4) Ajustar Header para acomodar versão
-5) Testar visualização da versão
+1) Atualizar package.json para versão 1.3.1
+2) Verificar funcionamento do script docker-build.sh
+3) Testar exibição da versão na interface
+4) Validar sistema de versionamento incremental
 
 # Testes
-- Unit: Verificar exibição da versão no componente Logo
-- Integration: Testar build Docker com nova versão
-- Visual: Confirmar que versão não quebra identidade visual
+- Unit: Verificar exibição da versão 1.3.1 nos componentes
+- Integration: Testar script de build Docker com nova versão
+- Visual: Confirmar que versão aparece corretamente na interface

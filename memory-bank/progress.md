@@ -330,6 +330,26 @@
 
 # Progresso do Projeto
 
+## Sistema de Versionamento Atualizado ✅
+
+### **Atualização para Versão 1.3.1:**
+- **Versão Anterior**: 1.0.0 (versão inicial do projeto)
+- **Versão Atual**: 1.3.1 (sincronizada com última imagem Docker)
+- **Próxima Versão**: 1.3.2 (incremento automático via script)
+
+### **Arquivos Atualizados:**
+- `package.json` - Versão alterada para 1.3.1
+- `env.development` - Variável de ambiente atualizada
+- Sistema de versionamento testado e validado
+
+### **Validação do Sistema:**
+- ✅ Script docker-build.sh incrementa corretamente de 1.3.1 → 1.3.2
+- ✅ Versão exibida corretamente na interface (header e footer)
+- ✅ Consistência entre versão do projeto e imagem Docker
+- ✅ Sistema de versionamento incremental funcionando perfeitamente
+
+---
+
 ## Sistema de Versionamento Implementado ✅
 
 ### Funcionalidades Implementadas:
