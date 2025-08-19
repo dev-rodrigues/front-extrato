@@ -1,39 +1,37 @@
 # Tipo da Tarefa
-feature
+refactor
 
 # Descrição
-Implementar sistema de autenticação com senha única para proteger todas as páginas do projeto. O usuário deve informar uma senha específica que será criptografada e armazenada de forma segura. Sistema deve incluir logout automático a cada 30 minutos, salvamento da página atual e redirecionamento após reautenticação.
+Alterar a URL base do serviço usado pelo axios de `https://146.164.65.231/EXTRATO` para `https://apidev.coppetec.ufrj.br/EXTRATO` nos ambientes de produção e teste. A aplicação atualmente está configurada para usar um IP específico, mas precisa ser migrada para o domínio oficial da API de desenvolvimento da Coppetec.
 
 # Contexto (arquivos/trechos)
-- src/pages/SchedulePage.tsx (página atual)
-- src/App.tsx (componente principal)
-- src/routes/index.tsx (roteamento)
-- src/components/layout/Header/Header.tsx (header com logo)
-- src/components/ui/ (componentes de UI existentes)
-- src/stores/ (estados globais)
-- src/types/ (tipos TypeScript)
+- src/services/api.ts (linhas 15-16, 20-21) - Configuração da baseURL nos ambientes
+- env.production (linhas 6-7) - URL da API em produção
+- env.production (linhas 25-26) - URL do WebSocket em produção
+- env.development (linhas 1-6) - Configurações de desenvolvimento
 
 # Critérios de Aceite
-- [x] Criar página de login minimalista seguindo identidade visual do projeto
-- [x] Implementar sistema de autenticação com senha única: Ultr@S3Cr3t@!@#
-- [x] Criptografar e ocultar senha no projeto de forma segura
-- [x] Proteger todas as rotas e páginas existentes
-- [x] Implementar logout automático a cada 30 minutos
-- [x] Salvar página atual do usuário antes do logout
-- [x] Redirecionar para página salva após reautenticação
-- [x] Não fazer requests para backend para validação de token
-- [x] Página de login deve conter nome do projeto e logo
-- [x] Sistema deve funcionar sem dependências externas
+- [ ] URL da API alterada para `https://apidev.coppetec.ufrj.br/EXTRATO` em produção
+- [ ] URL do WebSocket alterada para `https://apidev.coppetec.ufrj.br/EXTRATO` em produção
+- [ ] URL da API alterada para `https://apidev.coppetec.ufrj.br/EXTRATO` em desenvolvimento (fallback)
+- [ ] Configurações de timeout e retry mantidas conforme ambiente
+- [ ] Logs de configuração atualizados para refletir nova URL
+- [ ] Testes de conectividade com nova API funcionando
 
 # Plano (curto)
-1) Criar componente de autenticação com criptografia da senha
-2) Implementar store para gerenciar estado de autenticação
-3) Criar página de login minimalista com identidade visual
-4) Implementar proteção de rotas com guard de autenticação
-5) Adicionar sistema de timeout automático (30 min)
-6) Implementar salvamento e restauração da página atual
-7) Integrar sistema em todas as páginas existentes
+1) Atualizar `env.production` com nova URL da API e WebSocket
+2) Atualizar `env.development` com nova URL como fallback
+3) Verificar se `src/services/api.ts` precisa de ajustes na configuração
+4) Testar conectividade com nova API
+5) Validar funcionamento em ambiente de produção
 
 # Testes
-- Unit: Testes de criptografia, timeout automático, proteção de rotas
-- Integration: Fluxo completo de login → navegação → logout automático → reautenticação → retorno à página
+- Unit: Verificar se configurações de ambiente são carregadas corretamente
+- Integration: Testar conectividade com nova API em diferentes ambientes
+- E2E: Validar fluxos principais da aplicação com nova URL
+
+# Observações
+- A URL atual `https://146.164.65.231/EXTRATO` será substituída por `https://apidev.coppetec.ufrj.br/EXTRATO`
+- Manter configurações específicas de cada ambiente (timeout, retry, etc.)
+- Verificar se há outros serviços que dependem da URL da API
+- Considerar impacto em logs e monitoramento
