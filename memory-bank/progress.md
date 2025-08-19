@@ -327,3 +327,49 @@
 **Data de Atualização**: 2024-01-15  
 **Responsável**: Sistema Memory Bank - Modo PLAN  
 **Status**: ✅ TASK-001 ARQUIVADA + ✅ TASK-017 ARQUIVADA + ✅ TASK-018 ARQUIVADA + 📋 TASK-002 PLANEJADA
+
+# Progresso do Projeto
+
+## Sistema de Versionamento Implementado ✅
+
+### Funcionalidades Implementadas:
+- **Script Docker Atualizado**: `docker-build.sh` agora obtém versão do `package.json` e incrementa automaticamente
+- **Versionamento Automático**: Script atualiza `package.json` com nova versão antes do build
+- **Exibição da Versão**: Componente Logo agora exibe versão da aplicação de forma minimalista
+- **Integração Docker**: Dockerfile recebe versão via build arg e define variável de ambiente
+- **Arquivo de Ambiente**: Criado `env.development` para configurações de desenvolvimento
+
+### Arquivos Modificados:
+- `docker-build.sh` - Script de build corrigido para versionamento automático
+- `package.json` - Versão atualizada para 1.0.0
+- `src/components/layout/Header/Logo.tsx` - Adicionada exibição da versão
+- `Dockerfile` - Incluído build arg VERSION e variável de ambiente
+- `env.development` - Configurações de ambiente para desenvolvimento
+
+### Características da Implementação:
+- **Etiqueta Elegante**: Versão exibida como etiqueta abaixo da logo com fundo e bordas arredondadas
+- **Design Minimalista**: Fundo semi-transparente com bordas sutis e sombra suave
+- **Responsiva**: Adapta-se aos diferentes breakpoints (mobile, tablet, desktop)
+- **Integrada**: Posicionamento absoluto que não interfere no layout existente
+- **Automática**: Versionamento acontece automaticamente durante o build Docker
+
+### **Detalhes do Design da Etiqueta:**
+- **Posicionamento**: `absolute top-full` para ficar abaixo da logo
+- **Background**: `bg-primary/10` (primary com 10% de opacidade)
+- **Bordas**: `rounded-md` com `border border-primary/20`
+- **Sombra**: `shadow-sm` para profundidade sutil
+- **Efeito**: `backdrop-blur-sm` para modernidade
+- **Texto**: `text-xs font-mono` para legibilidade técnica
+- **Responsividade**: Ocultada em mobile muito pequeno (`hidden sm:block`)
+
+### Como Funciona:
+1. Script `docker-build.sh` lê versão atual do `package.json`
+2. Incrementa versão (patch version)
+3. Atualiza `package.json` com nova versão
+4. Passa versão para Dockerfile via build arg
+5. Interface exibe versão ao lado da logo usando variável de ambiente
+
+---
+
+## Sistema está funcionando e estável
+- Nova tarefa focada em limpeza e otimização de código

@@ -29,3 +29,36 @@
 - Todas as tarefas anteriores foram concluídas com sucesso
 - Sistema está funcionando e estável
 - Nova tarefa focada em limpeza e otimização de código
+
+---
+
+# Tipo da Tarefa
+feature
+
+# Descrição
+Corrigir o sistema de versionamento automático do projeto e exibir a versão da aplicação na interface do usuário como uma etiqueta elegante abaixo da logo, mantendo a identidade visual minimalista e integrada ao design do projeto.
+
+# Contexto (arquivos/trechos)
+- docker-build.sh (script de build Docker)
+- package.json (versão do projeto)
+- src/components/layout/Header/Logo.tsx (componente da logo)
+- src/components/layout/Header/Header.tsx (header principal)
+
+# Critérios de Aceite
+- [x] Corrigir docker-build.sh para gerar versão correta do projeto
+- [x] Atualizar versão em package.json automaticamente
+- [x] Exibir versão da aplicação ao lado da logo
+- [x] Manter identidade visual minimalista e clara
+- [x] Versão não deve quebrar o design existente
+
+# Plano (curto)
+1) Corrigir script docker-build.sh para versionamento correto
+2) Atualizar package.json com nova versão
+3) Modificar componente Logo para exibir versão
+4) Ajustar Header para acomodar versão
+5) Testar visualização da versão
+
+# Testes
+- Unit: Verificar exibição da versão no componente Logo
+- Integration: Testar build Docker com nova versão
+- Visual: Confirmar que versão não quebra identidade visual

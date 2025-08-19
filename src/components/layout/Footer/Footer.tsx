@@ -34,7 +34,7 @@ export function Footer({ className }: FooterProps) {
               aria-label="Logo Kiwi Bird"
             />
             <span className="text-sm font-medium text-muted-foreground">
-              Kiwi BB Extrato
+              Kiwi v{import.meta.env.VITE_APP_VERSION || '1.0.0'}
             </span>
           </div>
 

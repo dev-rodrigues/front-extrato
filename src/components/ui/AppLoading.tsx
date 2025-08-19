@@ -15,7 +15,7 @@ interface AppLoadingProps {
  */
 export function AppLoading({ 
   size = 'md', 
-  text = 'Carregando...',
+  text = ' ',
   className = '',
   isRefetching = false,
   showRefetchIndicator = true

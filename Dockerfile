@@ -5,6 +5,9 @@ FROM --platform=linux/amd64 node:20.19.4-alpine AS builder
 # Definir diretório de trabalho
 WORKDIR /app
 
+# Definir build arg para versão
+ARG VERSION=1.0.0
+
 # Copiar arquivos de dependências
 COPY package*.json ./
 
@@ -18,6 +21,7 @@ COPY . .
 ENV VITE_API_BASE_URL=http://146.164.65.231/EXTRATO
 ENV VITE_NODE_ENV=production
 ENV VITE_APP_ENV=production
+ENV VITE_APP_VERSION=${VERSION}
 ENV NODE_ENV=production
 
 # Build da aplicação para produção
@@ -25,6 +29,9 @@ RUN npm run build
 
 # Stage de produção com nginx
 FROM --platform=linux/amd64 nginx:stable-alpine AS production
+
+# Definir build arg para versão
+ARG VERSION=1.0.0
 
 # Copiar configuração customizada do nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
