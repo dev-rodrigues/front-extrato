@@ -4,7 +4,7 @@
  */
 
 // Versão da aplicação - sincronizada com package.json
-export const APP_VERSION = '1.3.8'
+export const APP_VERSION = '1.3.10'
 
 // Função para obter a versão atual
 export function getAppVersion(): string {

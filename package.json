@@ -2,7 +2,7 @@
   "homepage": "/front-extrato",
   "name": "frontend-bb-extrato",
   "private": true,
-  "version": "1.3.8",
+  "version": "1.3.10",
   "type": "module",
   "scripts": {
     "dev": "vite",
