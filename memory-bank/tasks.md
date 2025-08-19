@@ -11,6 +11,7 @@
 ---
 
 ## Histórico de Tarefas
+- ✅ **TASK-021**: Limpeza e Otimização de Arquivos de Rotas e Configuração (Arquivada)
 - ✅ **TASK-020**: Componente de Card Padronizado com Loading de Refetch (Arquivada)
 - ✅ **TASK-019**: Ajuste do Header para Design System (Arquivada)
 - ✅ **TASK-018**: Implementação de Sistema de Feedback Visual (Arquivada)
@@ -27,4 +28,4 @@
 ## Notas
 - Todas as tarefas anteriores foram concluídas com sucesso
 - Sistema está funcionando e estável
-- Próxima tarefa será definida conforme necessidade do projeto
+- Nova tarefa focada em limpeza e otimização de código
