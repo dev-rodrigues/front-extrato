@@ -36,7 +36,7 @@
 feature
 
 # Descrição
-Atualizar o projeto para a versão v1.3.1 (última versão da imagem Docker) e continuar o sistema de versionamento incremental a partir dessa numeração.
+Centralizar a versão da aplicação em um único local e garantir que seja atualizada automaticamente em todos os componentes quando uma nova versão for gerada, eliminando a necessidade de atualizar manualmente em múltiplos arquivos.
 
 # Contexto (arquivos/trechos)
 - package.json (versão atual 1.0.0)

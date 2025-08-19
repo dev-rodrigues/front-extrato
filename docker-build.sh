@@ -39,6 +39,16 @@ fs.writeFileSync('./package.json', JSON.stringify(package, null, 2) + '\n');
 "
 echo "✅ package.json atualizado para versão ${NEW_VERSION}"
 
+# Atualizar arquivo version.ts com nova versão
+echo "📝 Atualizando version.ts com nova versão..."
+node -e "
+const fs = require('fs');
+const versionContent = fs.readFileSync('./src/version.ts', 'utf8');
+const updatedContent = versionContent.replace(/export const APP_VERSION = '[^']*'/, \"export const APP_VERSION = '${NEW_VERSION}'\");
+fs.writeFileSync('./src/version.ts', updatedContent);
+"
+echo "✅ version.ts atualizado para versão ${NEW_VERSION}"
+
 # Build da imagem
 echo "🔨 Construindo imagem Docker para AMD64 (Linux)..."
 echo "📱 Build cross-platform: Mac M1/M2 (ARM64) → Linux (AMD64)"

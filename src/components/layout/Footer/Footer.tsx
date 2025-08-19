@@ -5,6 +5,7 @@
 
 import { GiKiwiBird } from 'react-icons/gi'
 import { cn } from '@/lib/utils'
+import { getFormattedVersion } from '@/version'
 
 interface FooterProps {
   className?: string
@@ -34,7 +35,7 @@ export function Footer({ className }: FooterProps) {
               aria-label="Logo Kiwi Bird"
             />
             <span className="text-sm font-medium text-muted-foreground">
-              Kiwi v{import.meta.env.VITE_APP_VERSION || '1.0.0'}
+              Kiwi v{getFormattedVersion()}
             </span>
           </div>
 

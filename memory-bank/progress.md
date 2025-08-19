@@ -330,27 +330,29 @@
 
 # Progresso do Projeto
 
-## Sistema de Versionamento Atualizado ✅
+## Sistema de Versionamento Centralizado ✅
 
-### **Atualização para Versão 1.3.1:**
-- **Versão Anterior**: 1.0.0 (versão inicial do projeto)
-- **Versão Atual**: 1.3.1 (sincronizada com última imagem Docker)
-- **Próxima Versão**: 1.3.2 (incremento automático via script)
+### **Centralização da Versão:**
+- **Arquivo Central**: `src/version.ts` - Único local para definir versão
+- **Componentes Atualizados**: Logo e Footer agora importam de `version.ts`
+- **Script Automatizado**: `docker-build.sh` atualiza automaticamente `version.ts`
+- **Sincronização**: Versão sempre consistente entre package.json e interface
 
-### **Arquivos Atualizados:**
-- `package.json` - Versão alterada para 1.3.1
-- `env.development` - Variável de ambiente atualizada
-- Sistema de versionamento testado e validado
+### **Arquivos Modificados:**
+- `src/version.ts` - Arquivo centralizado criado
+- `src/components/layout/Header/Logo.tsx` - Importa de version.ts
+- `src/components/layout/Footer/Footer.tsx` - Importa de version.ts
+- `docker-build.sh` - Atualiza automaticamente version.ts
 
-### **Validação do Sistema:**
-- ✅ Script docker-build.sh incrementa corretamente de 1.3.1 → 1.3.2
-- ✅ Versão exibida corretamente na interface (header e footer)
-- ✅ Consistência entre versão do projeto e imagem Docker
-- ✅ Sistema de versionamento incremental funcionando perfeitamente
+### **Benefícios:**
+- ✅ **Single Source of Truth**: Versão definida em um único local
+- ✅ **Atualização Automática**: Script Docker atualiza todos os arquivos
+- ✅ **Consistência**: Interface sempre exibe versão correta
+- ✅ **Manutenibilidade**: Não precisa atualizar manualmente em múltiplos locais
 
 ---
 
-## Sistema de Versionamento Implementado ✅
+## Sistema de Versionamento Atualizado ✅
 
 ### Funcionalidades Implementadas:
 - **Script Docker Atualizado**: `docker-build.sh` agora obtém versão do `package.json` e incrementa automaticamente

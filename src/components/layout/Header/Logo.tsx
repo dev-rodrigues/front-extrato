@@ -6,6 +6,7 @@
 
 import { GiKiwiBird } from 'react-icons/gi'
 import { cn } from '@/lib/utils'
+import { getFormattedVersion } from '@/version'
 
 interface LogoProps {
   variant?: 'default' | 'compact' | 'mobile'
@@ -68,7 +69,7 @@ export function Logo({ variant = 'default', className }: LogoProps) {
           // Ocultar versão em mobile muito pequeno
           isMobile && 'hidden sm:block'
         )}>
-          v{import.meta.env.VITE_APP_VERSION || '1.0.0'}
+          v{getFormattedVersion()}
         </span>
       </div>
     </div>
