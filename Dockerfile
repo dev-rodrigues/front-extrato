@@ -20,7 +20,7 @@ RUN node -e "console.log(require('./package.json').version)" > .version
 ARG VERSION=$(cat .version)
 
 # Definir variáveis de ambiente para produção durante o build
-ENV VITE_API_BASE_URL=http://146.164.65.231/EXTRATO
+ENV VITE_API_BASE_URL=https://146.164.65.231/EXTRATO
 ENV VITE_NODE_ENV=production
 ENV VITE_APP_ENV=production
 ENV VITE_APP_VERSION=${VERSION}
