@@ -15,8 +15,9 @@ import {
   Clock,
   RefreshCw
 } from 'lucide-react'
-import { useMockSchedule } from '@/mocks/jobsMock'
+import { useSchedule } from '@/hooks/useSchedule'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
+import type { JobProgressResponse, JobExecutionStatus } from '@/types/rfc'
 
 /**
  * Schedule Page - Implementa EXATAMENTE o que está documentado nos RFCs
@@ -27,10 +28,15 @@ import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
  * - GET /api/schedule/job/{jobName} - Cancelar job
  */
 export function SchedulePage() {
-  // Usando o hook mock em vez da API real
-  const { jobs: activeJobs, isRefetching: activeJobsRefetching, isLoading, refetchJobs } = useMockSchedule()
+  // Usando o hook real da API
+  const { 
+    activeJobs, 
+    activeJobsRefetching, 
+    activeJobsLoading: isLoading, 
+    refresh: refetchJobs 
+  } = useSchedule()
   
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<JobExecutionStatus | 'all'>('all')
   const [periodFilter, setPeriodFilter] = useState<string>('24h')
 
   // Função para atualizar manualmente
@@ -65,19 +71,19 @@ export function SchedulePage() {
   }
 
   // Função para obter cor do status
-  const getStatusColor = (status: string): string => {
+  const getStatusColor = (status: JobExecutionStatus): string => {
     switch (status) {
       case 'RUNNING': return 'bg-blue-100 text-blue-800 hover:bg-blue-100 hover:text-blue-800'
       case 'STARTING': return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100 hover:text-yellow-800'
       case 'COMPLETED': return 'bg-green-100 text-green-800 hover:bg-green-100 hover:text-green-800'
       case 'FAILED': return 'bg-red-100 text-red-800 hover:bg-red-100 hover:text-red-800'
-      case 'CANCELLED': return 'bg-gray-100 text-gray-800 hover:bg-gray-100 hover:text-gray-800'
+      case 'CANCELLED': return 'bg-gray-100 text-gray-800 hover:bg-red-100 hover:text-gray-800'
       default: return 'bg-gray-100 text-gray-800 hover:bg-gray-100 hover:text-gray-800'
     }
   }
 
   // Função para obter ícone do status
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: JobExecutionStatus) => {
     switch (status) {
       case 'RUNNING': return <Play className="h-4 w-4 animate-spin" />
       case 'STARTING': return <Play className="h-4 w-4 animate-spin" />
@@ -89,7 +95,7 @@ export function SchedulePage() {
   }
 
   // Filtrar jobs baseado nos filtros selecionados
-  const filteredJobs = activeJobs.filter(job => {
+  const filteredJobs = activeJobs.filter((job: JobProgressResponse) => {
     if (statusFilter !== 'all' && job.status !== statusFilter) return false
     // Aqui poderia implementar filtro de período se necessário
     return true
@@ -147,7 +153,7 @@ export function SchedulePage() {
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center space-x-2">
               <span className="text-sm font-medium">Status:</span>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={(value: string) => setStatusFilter(value as JobExecutionStatus | 'all')}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
@@ -210,7 +216,7 @@ export function SchedulePage() {
               Nenhum job ativo encontrado
             </div>
           ) : (
-            filteredJobs.map((job) => (
+            filteredJobs.map((job: JobProgressResponse) => (
               <CardWithRefetch 
                 key={job.jobName}
                 className="border rounded-lg p-4 transition-all duration-300 hover:shadow-md"
