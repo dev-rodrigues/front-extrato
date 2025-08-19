@@ -13,7 +13,13 @@ export { Progress } from './ui/progress'
 export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 export { RadioGroup, RadioGroupItem } from './ui/radio-group'
 export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu'
+export { Alert, AlertTitle, AlertDescription } from './ui/alert'
+export { ErrorPage, NotFoundPage, GenericErrorPage } from './ui/ErrorPage'
 export { AppLoading, AppLoadingFullScreen, AppLoadingInline } from './ui/AppLoading'
+
+// Auth Components
+export { ProtectedRoute } from './auth/ProtectedRoute'
+export { LogoutButton } from './auth/LogoutButton'
 
 // Layout Components
 export { Layout } from './layout/Layout'

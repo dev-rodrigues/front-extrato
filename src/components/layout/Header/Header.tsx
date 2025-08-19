@@ -6,6 +6,7 @@
 import { Logo } from './Logo'
 import { DesktopNav } from './DesktopNav'
 import { MobileMenu } from './MobileMenu'
+import { LogoutButton } from '@/components/auth/LogoutButton'
 
 /**
  * Header responsivo da aplicação
@@ -27,6 +28,9 @@ export function Header() {
 
           {/* Navegação Desktop */}
           <DesktopNav />
+
+          {/* Botão de Logout */}
+          <LogoutButton />
 
           {/* Menu Mobile */}
           <MobileMenu />

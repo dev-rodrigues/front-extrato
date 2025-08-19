@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { getFormattedVersion } from '@/version'
 
 interface LogoProps {
-  variant?: 'default' | 'compact' | 'mobile'
+  variant?: 'default' | 'compact' | 'mobile' | 'desktop'
   className?: string
 }
 
@@ -19,10 +19,12 @@ interface LogoProps {
  * - default: Logo completo (desktop)
  * - compact: Logo compacto (tablet)
  * - mobile: Logo minimalista (mobile)
+ * - desktop: Logo para tela de login (cor preta)
  */
 export function Logo({ variant = 'default', className }: LogoProps) {
   const isCompact = variant === 'compact' || variant === 'mobile'
   const isMobile = variant === 'mobile'
+  const isDesktop = variant === 'desktop'
 
   return (
     <div className={cn(
@@ -38,40 +40,46 @@ export function Logo({ variant = 'default', className }: LogoProps) {
         isMobile && 'h-5 w-5'
       )}>
         <GiKiwiBird 
-          className="w-full h-full text-primary-foreground" 
+          className={cn(
+            'w-full h-full',
+            isDesktop ? 'text-gray-900' : 'text-primary-foreground'
+          )}
           aria-label="Logo Kiwi Bird"
         />
       </div>
       
       {/* Texto do logo */}
       <span className={cn(
-        'font-bold text-primary-foreground',
+        'font-bold',
+        isDesktop ? 'text-gray-900' : 'text-primary-foreground',
         isCompact ? 'text-lg' : 'text-xl',
         isMobile && 'text-base',
         // Ocultar texto em mobile muito pequeno
         isMobile && 'hidden sm:inline'
       )}>
-        {isMobile ? 'Kiwi' : 'Kiwi BB Extrato'}
+        {isMobile ? 'Kiwi' : 'Kiwi'}
       </span>
 
       {/* Versão da aplicação como etiqueta */}
-      <div className={cn(
-        'absolute top-full left-0 -mt-1',
-        // Ajustar posicionamento baseado no tamanho da logo
-        isCompact ? 'left-0' : 'left-0',
-        isMobile && 'left-0'
-      )}>
-        <span className={cn(
-          'inline-block px-1 py-0.5 text-xs font-mono scale-50',
-          'bg-blue-600 text-white',
-          'rounded-full border border-blue-500/30',
-          'shadow-sm',
-          // Ocultar versão em mobile muito pequeno
-          isMobile && 'hidden sm:block'
+      {!isDesktop && (
+        <div className={cn(
+          'absolute top-full left-0 -mt-1',
+          // Ajustar posicionamento baseado no tamanho da logo
+          isCompact ? 'left-0' : 'left-0',
+          isMobile && 'left-0'
         )}>
-          v{getFormattedVersion()}
-        </span>
-      </div>
+          <span className={cn(
+            'inline-block px-1 py-0.5 text-xs font-mono scale-50',
+            'bg-blue-600 text-white',
+            'rounded-full border border-blue-500/30',
+            'shadow-sm',
+            // Ocultar versão em mobile muito pequeno
+            isMobile && 'hidden sm:block'
+          )}>
+            v{getFormattedVersion()}
+          </span>
+        </div>
+      )}
     </div>
   )
 }

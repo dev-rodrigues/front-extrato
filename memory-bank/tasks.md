@@ -1,77 +1,39 @@
 # Tipo da Tarefa
-refactor
+feature
 
 # Descrição
-Corrigir o Dockerfile principal para seguir o padrão do Dockerfile.nginx de referência, implementando:
-- Nome da pasta de saída dinâmico baseado em vite.constants.ts (schedkiwi)
-- Versão dinâmica baseada no arquivo central src/version.ts
-- Estrutura multi-stage otimizada seguindo o padrão de referência
+Implementar sistema de autenticação com senha única para proteger todas as páginas do projeto. O usuário deve informar uma senha específica que será criptografada e armazenada de forma segura. Sistema deve incluir logout automático a cada 30 minutos, salvamento da página atual e redirecionamento após reautenticação.
 
 # Contexto (arquivos/trechos)
-- Dockerfile (arquivo principal a ser corrigido)
-- memory-bank/Dockerfile.nginx (arquivo de referência)
-- vite.constants.ts (define basepath: "/schedkiwi")
-- src/version.ts (define APP_VERSION = '1.3.1')
-- package.json (versão sincronizada: "1.3.1")
+- src/pages/SchedulePage.tsx (página atual)
+- src/App.tsx (componente principal)
+- src/routes/index.tsx (roteamento)
+- src/components/layout/Header/Header.tsx (header com logo)
+- src/components/ui/ (componentes de UI existentes)
+- src/stores/ (estados globais)
+- src/types/ (tipos TypeScript)
 
 # Critérios de Aceite
-- [x] Dockerfile usa nome da pasta dinâmico do vite.constants.ts (schedkiwi)
-- [x] Versão é obtida dinamicamente do src/version.ts
-- [x] Estrutura multi-stage segue o padrão do Dockerfile.nginx
-- [x] Build funciona corretamente com as configurações dinâmicas
-- [x] Nome da pasta de saída é consistente com a configuração do Vite
+- [x] Criar página de login minimalista seguindo identidade visual do projeto
+- [x] Implementar sistema de autenticação com senha única: Ultr@S3Cr3t@!@#
+- [x] Criptografar e ocultar senha no projeto de forma segura
+- [x] Proteger todas as rotas e páginas existentes
+- [x] Implementar logout automático a cada 30 minutos
+- [x] Salvar página atual do usuário antes do logout
+- [x] Redirecionar para página salva após reautenticação
+- [x] Não fazer requests para backend para validação de token
+- [x] Página de login deve conter nome do projeto e logo
+- [x] Sistema deve funcionar sem dependências externas
 
 # Plano (curto)
-1) Analisar diferenças entre Dockerfile atual e Dockerfile.nginx
-2) Implementar obtenção dinâmica da versão do src/version.ts
-3) Implementar nome da pasta dinâmico do vite.constants.ts
-4) Ajustar estrutura multi-stage para seguir o padrão de referência
-5) Testar build para garantir funcionamento
+1) Criar componente de autenticação com criptografia da senha
+2) Implementar store para gerenciar estado de autenticação
+3) Criar página de login minimalista com identidade visual
+4) Implementar proteção de rotas com guard de autenticação
+5) Adicionar sistema de timeout automático (30 min)
+6) Implementar salvamento e restauração da página atual
+7) Integrar sistema em todas as páginas existentes
 
 # Testes
-- Unit: Verificar se as constantes são lidas corretamente
-- Integration: Testar build completo do Docker e verificar se a pasta de saída está correta
-
-# Implementação Concluída
-✅ **Dockerfile corrigido:**
-- Nome da pasta alterado de `web-dev` para `schedkiwi` (baseado em vite.constants.ts)
-- Versão obtida dinamicamente do package.json (1.3.1)
-- Estrutura multi-stage otimizada seguindo o padrão de referência
-- nginx.conf atualizado para usar a pasta `schedkiwi`
-
-✅ **Testes realizados:**
-- Build local funcionando (npm run build)
-- Build Docker funcionando (docker build)
-- Container testado e funcionando (HTTP 200)
-- Basepath `/schedkiwi` aplicado corretamente no HTML gerado
-
-✅ **Arquivos modificados:**
-- Dockerfile (estrutura e versão dinâmica)
-- nginx.conf (pasta schedkiwi)
-
-✅ **Nova versão gerada e publicada:**
-- Versão atualizada de 1.3.1 para 1.3.2
-- Imagem Docker publicada no Docker Hub: https://hub.docker.com/r/httpsantos/front-extrato
-- Tags criadas: prod, latest, v1.3.2
-- Script docker-build.sh melhorado com opções multi-platform
-
-✅ **Script de build melhorado:**
-- Suporte a argumentos de linha de comando
-- Opção --multi-platform para build AMD64 + ARM64
-- Opção --no-push para build local apenas
-- Opção --help para documentação
-- Build automático com incremento de versão
-
-✅ **Problemas corrigidos no multi-platform:**
-- Removidos platform flags hardcoded do Dockerfile
-- Corrigida lógica de push para multi-platform
-- Build multi-platform funcionando (AMD64 + ARM64)
-- Imagens disponíveis para ambas as plataformas no Docker Hub
-- Versão 1.3.4 gerada com sucesso via multi-platform
-
-✅ **Hook mock substituído por hook real:**
-- Removido useMockSchedule do SchedulePage.tsx
-- Implementado useSchedule real com React Query
-- Tipos corrigidos para JobProgressResponse e JobExecutionStatus
-- Build funcionando sem erros de linting
-- Integração com API real implementada
+- Unit: Testes de criptografia, timeout automático, proteção de rotas
+- Integration: Fluxo completo de login → navegação → logout automático → reautenticação → retorno à página

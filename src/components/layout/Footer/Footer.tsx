@@ -35,7 +35,7 @@ export function Footer({ className }: FooterProps) {
               aria-label="Logo Kiwi Bird"
             />
             <span className="text-sm font-medium text-muted-foreground">
-              Kiwi v{getFormattedVersion()}
+              Kiwi {getFormattedVersion()}
             </span>
           </div>
 

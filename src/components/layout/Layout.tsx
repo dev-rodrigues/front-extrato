@@ -12,6 +12,7 @@
 import { Outlet } from 'react-router-dom'
 import { Header } from './Header/Header'
 import { Footer } from './Footer/Footer'
+import { useAuthTimeout } from '@/stores/useAuthStore'
 
 interface LayoutProps {
   children?: React.ReactNode
@@ -26,6 +27,9 @@ interface LayoutProps {
  * - Layout mobile-first otimizado
  */
 export function Layout({ children }: LayoutProps) {
+  // Inicializar sistema de timeout automático
+  useAuthTimeout()
+  
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header responsivo com navegação */}
