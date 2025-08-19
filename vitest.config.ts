@@ -2,10 +2,11 @@
 import {defineConfig} from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import constants from "./vite.constants";
 
 export default defineConfig({
     plugins: [react()],
-    base: '/front-extrato/',
+    base: constants.basepath,
     test: {
         globals: true,
         environment: 'jsdom',

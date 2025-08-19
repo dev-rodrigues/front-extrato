@@ -1,36 +1,30 @@
-# NOVA TASK
+# TASKS - Banco de Memória
 
-## Tipo da Tarefa
-[feature/bugfix/refactor]
+## Tarefa Atual
+*Nenhuma tarefa ativa no momento*
 
-## Descrição
-[Descreva brevemente o que será implementado/corrigido]
+---
 
-## Contexto (arquivos/trechos)
-- [Liste os arquivos ou trechos relevantes]
+## Próxima Tarefa
+*Aguardando definição da próxima tarefa*
 
-## Critérios de Aceite
-- [ ] [Critério 1]
-- [ ] [Critério 2]
-- [ ] [Critério 3]
+---
 
-## Plano (curto)
-1) [ ] [Passo 1]
-2) [ ] [Passo 2]
-3) [ ] [Passo 3]
+## Histórico de Tarefas
+- ✅ **TASK-020**: Componente de Card Padronizado com Loading de Refetch (Arquivada)
+- ✅ **TASK-019**: Ajuste do Header para Design System (Arquivada)
+- ✅ **TASK-018**: Implementação de Sistema de Feedback Visual (Arquivada)
+- ✅ **TASK-017**: Sistema de Loading e Feedback Visual (Arquivada)
+- ✅ **TASK-016**: Implementação de React Query (Arquivada)
+- ✅ **TASK-015**: Dockerização da Aplicação (Arquivada)
+- ✅ **TASK-006**: Estrutura Base da Aplicação (Arquivada)
+- ✅ **TASK-004**: Configuração do Projeto (Arquivada)
+- ✅ **TASK-003**: Análise e Estruturação (Arquivada)
+- ✅ **TASK-001**: Setup Inicial do Projeto (Arquivada)
 
-## Testes
-- [ ] [Tipo de teste 1]
-- [ ] [Tipo de teste 2]
+---
 
-## Arquivos a Criar/Modificar
-- [ ] [Arquivo 1] - [Descrição]
-- [ ] [Arquivo 2] - [Descrição]
-
-## Comandos de Teste
-```bash
-# Comandos para testar
-```
-
-## Observações
-[Observações importantes sobre a implementação]
+## Notas
+- Todas as tarefas anteriores foram concluídas com sucesso
+- Sistema está funcionando e estável
+- Próxima tarefa será definida conforme necessidade do projeto

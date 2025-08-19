@@ -4,19 +4,18 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AppLoading, AppLoadingSkeleton, UpdateIndicator, ProgressUpdateIndicator } from '@/components/ui/AppLoading'
+import { AppLoading, AppLoadingSkeleton, ProgressUpdateIndicator } from '@/components/ui/AppLoading'
+import { CardWithRefetch } from '@/components/ui/CardWithRefetch'
 import { 
-  Play, 
-  Square, 
-  AlertCircle, 
-  Clock,
+  Eye,
+  Square,
+  Play,
   CheckCircle,
   XCircle,
-  Activity,
-  Eye,
+  Clock,
   RefreshCw
 } from 'lucide-react'
-import { useSchedule } from '@/hooks/useSchedule'
+import { useMockSchedule } from '@/mocks/jobsMock'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
 
 /**
@@ -28,24 +27,16 @@ import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
  * - GET /api/schedule/job/{jobName} - Cancelar job
  */
 export function SchedulePage() {
-  const { 
-    activeJobs, 
-    progress: progressSummary, 
-    loading, 
-    refetching,
-    error, 
-    cancelJob, 
-    refresh,
-    // Estados individuais para controle granular
-    activeJobsLoading,
-    // Estados de refetch para indicadores visuais
-    activeJobsRefetching,
-    // Mutation para cancelar job
-    cancelJobMutation
-  } = useSchedule()
+  // Usando o hook mock em vez da API real
+  const { jobs: activeJobs, isRefetching: activeJobsRefetching, isLoading, refetchJobs } = useMockSchedule()
   
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [periodFilter, setPeriodFilter] = useState<string>('24h')
+
+  // Função para atualizar manualmente
+  const handleRefresh = () => {
+    refetchJobs()
+  }
 
   // Função para formatar tempo em milissegundos
   const formatDuration = (ms: number | undefined | null): string => {
@@ -76,19 +67,19 @@ export function SchedulePage() {
   // Função para obter cor do status
   const getStatusColor = (status: string): string => {
     switch (status) {
-      case 'RUNNING': return 'bg-blue-100 text-blue-800'
-      case 'STARTING': return 'bg-yellow-100 text-yellow-800'
-      case 'COMPLETED': return 'bg-green-100 text-green-800'
-      case 'FAILED': return 'bg-red-100 text-red-800'
-      case 'CANCELLED': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'RUNNING': return 'bg-blue-100 text-blue-800 hover:bg-blue-100 hover:text-blue-800'
+      case 'STARTING': return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100 hover:text-yellow-800'
+      case 'COMPLETED': return 'bg-green-100 text-green-800 hover:bg-green-100 hover:text-green-800'
+      case 'FAILED': return 'bg-red-100 text-red-800 hover:bg-red-100 hover:text-red-800'
+      case 'CANCELLED': return 'bg-gray-100 text-gray-800 hover:bg-gray-100 hover:text-gray-800'
+      default: return 'bg-gray-100 text-gray-800 hover:bg-gray-100 hover:text-gray-800'
     }
   }
 
   // Função para obter ícone do status
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'RUNNING': return <Activity className="h-4 w-4 animate-pulse" />
+      case 'RUNNING': return <Play className="h-4 w-4 animate-spin" />
       case 'STARTING': return <Play className="h-4 w-4 animate-spin" />
       case 'COMPLETED': return <CheckCircle className="h-4 w-4" />
       case 'FAILED': return <XCircle className="h-4 w-4" />
@@ -105,21 +96,8 @@ export function SchedulePage() {
   })
 
   // Loading inicial
-  if (loading) {
+  if (isLoading) {
     return <AppLoading />
-  }
-
-  // Erro
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
-          <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={refresh}>Tentar Novamente</Button>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -139,21 +117,21 @@ export function SchedulePage() {
         {/* Indicador de atualização automática com GiKiwiBird */}
         <div className="flex items-center space-x-3">
           {/* UpdateIndicator personalizado */}
-          <UpdateIndicator 
-            size="md" 
-            isRefetching={refetching} 
+          {/* <UpdateIndicator
+            size="md"
+            isRefetching={activeJobsRefetching}
             showText={true}
-          />
+          /> */}
           
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={refresh}
-            disabled={refetching}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={activeJobsRefetching}
             className="transition-all duration-300"
           >
             <RefreshCw className={`h-4 w-4 mr-2 transition-all duration-300 ${
-              refetching ? 'animate-spin' : ''
+              activeJobsRefetching ? 'animate-spin' : ''
             }`} />
             Atualizar
           </Button>
@@ -208,22 +186,22 @@ export function SchedulePage() {
             <div>
               <CardTitle>Jobs Ativos</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {activeJobsLoading ? 'Carregando...' : `${filteredJobs.length} job(s) ativo(s) no momento`}
+                {isLoading ? 'Carregando...' : `${filteredJobs.length} job(s) ativo(s) no momento`}
               </p>
             </div>
             
             {/* Indicador de refetching para jobs ativos */}
-            <UpdateIndicator 
+            {/* <UpdateIndicator 
               size="sm" 
               isRefetching={activeJobsRefetching} 
               showText={true}
-            />
+            /> */}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {activeJobsLoading ? (
+          {isLoading ? (
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
+              {[1, 2, 3, 4].map((i) => (
                 <AppLoadingSkeleton key={i} isRefetching={activeJobsRefetching} />
               ))}
             </div>
@@ -233,7 +211,11 @@ export function SchedulePage() {
             </div>
           ) : (
             filteredJobs.map((job) => (
-              <div key={job.jobName} className="border rounded-lg p-4 transition-all duration-300 hover:shadow-md">
+              <CardWithRefetch 
+                key={job.jobName}
+                className="border rounded-lg p-4 transition-all duration-300 hover:shadow-md"
+              >
+                {/* Conteúdo específico do job passado como children */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
                     {getStatusIcon(job.status)}
@@ -255,27 +237,30 @@ export function SchedulePage() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => cancelJob(job.jobName)}
-                        disabled={cancelJobMutation.isPending}
+                        onClick={() => alert(`Cancelar: ${job.jobName}`)}
                         className="transition-all duration-300"
                       >
-                        {cancelJobMutation.isPending ? (
-                          <div className="flex items-center space-x-2">
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            <span>Cancelando...</span>
-                          </div>
-                        ) : (
-                          <>
-                            <Square className="h-4 w-4 mr-1" />
-                            Cancelar
-                          </>
-                        )}
+                        <Square className="h-4 w-4 mr-1" />
+                        Cancelar
                       </Button>
+                    )}
+                    
+                    {/* Loading de refetch posicionado ao lado dos botões */}
+                    {activeJobsRefetching && (
+                      <div className="animate-fade-in">
+                        <AppLoading 
+                          size="sm" 
+                          text=""
+                          className="flex-row items-center space-y-0 space-x-2"
+                          isRefetching={false}
+                          showRefetchIndicator={false}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
                 
-                {/* Barra de progresso com loading state */}
+                {/* Barra de progresso */}
                 <div className="mb-3">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm text-muted-foreground">Progresso</span>
@@ -284,7 +269,6 @@ export function SchedulePage() {
                     </span>
                   </div>
                   
-                  {/* Barra de progresso com loading iterativo */}
                   <Progress 
                     value={job.progressPercentage || 0} 
                     className="mb-2"
@@ -330,49 +314,11 @@ export function SchedulePage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </CardWithRefetch>
             ))
           )}
         </CardContent>
       </Card>
-
-      {/* Histórico de Jobs */}
-      {progressSummary && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Histórico de Jobs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-green-600">
-                  {progressSummary.completedJobs}
-                </div>
-                <div className="text-sm text-muted-foreground">Concluídos</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-red-600">
-                  {progressSummary.failedJobs}
-                </div>
-                <div className="text-sm text-muted-foreground">Falharam</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-600">
-                  {progressSummary.cancelledJobs}
-                </div>
-                <div className="text-sm text-muted-foreground">Cancelados</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {progressSummary.totalRecordsProcessed}
-                </div>
-                <div className="text-sm text-muted-foreground">Total Registros</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
 
     </div>
   )
